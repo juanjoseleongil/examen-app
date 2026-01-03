@@ -275,7 +275,10 @@ export default function MathExam() {
   // ====== RENDER (TODOS LOS RETURNS AQUÍ) ======
   if (mode === 'select') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" onCopy={(e) => e.preventDefault()} onContextMenu={(e) => e.preventDefault()}>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" id = "exc2"
+      onCopy={(e) => e.preventDefault()}
+      onContextMenu={(e) => e.preventDefault()}
+      >
         <div className="max-w-4xl w-full bg-white rounded-3xl shadow-2xl p-16 text-center border-8 border-indigo-200">
           <h1 className="text-5xl font-black text-gray-900 mb-12">Examen de Admisión - Matemáticas</h1>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -476,7 +479,10 @@ export default function MathExam() {
   // ====== EXAMEN (CANDIDATO) ======
   if (!started) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" onCopy={(e) => e.preventDefault()} onContextMenu={(e) => e.preventDefault()} style = {user-select: none;}>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" id = "exc1"
+      onCopy={(e) => e.preventDefault()}
+      onContextMenu={(e) => e.preventDefault()}
+      >
         <div className="max-w-2xl w-full bg-white rounded-3xl shadow-2xl p-12 text-center border-8 border-indigo-200">
           <h1 className="text-4xl font-black text-gray-900 mb-8">Datos del Candidato</h1>
           <input

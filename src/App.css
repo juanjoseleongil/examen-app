@@ -36,3 +36,25 @@
     transform: rotate(360deg);
   }
 }
+
+#exc1 {
+  user-select: none;
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none;    /* Firefox */
+  -ms-user-select: none;     /* Internet Explorer/Edge */
+}
+
+#exc2 {
+  user-select: none;
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none;    /* Firefox */
+  -ms-user-select: none;     /* Internet Explorer/Edge */
+}
+
+#exc1 button {
+  user-select: text;
+}
+
+#exc2 button {
+  user-select: text;
+}
