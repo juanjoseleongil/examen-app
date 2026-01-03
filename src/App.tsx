@@ -132,6 +132,7 @@ export default function MathExam() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [loadingResults, setLoadingResults] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [expandedResultId, setExpandedResultId] = useState<string | null>(null);
 
   // TODOS LOS EFFECTS AL INICIO, CON LÓGICA CONDICIONAL DENTRO
   useEffect(() => {
@@ -274,7 +275,7 @@ export default function MathExam() {
   // ====== RENDER (TODOS LOS RETURNS AQUÍ) ======
   if (mode === 'select') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" onCopy={(e) => e.preventDefault()} onContextMenu={(e) => e.preventDefault()}>
         <div className="max-w-4xl w-full bg-white rounded-3xl shadow-2xl p-16 text-center border-8 border-indigo-200">
           <h1 className="text-5xl font-black text-gray-900 mb-12">Examen de Admisión - Matemáticas</h1>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -300,7 +301,7 @@ export default function MathExam() {
 
   if (mode === 'admin-login') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" >
         <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-12 border-8 border-purple-200">
           <h1 className="text-4xl font-black text-gray-900 mb-8 text-center">Panel Administrador</h1>
           <input
@@ -406,25 +407,64 @@ export default function MathExam() {
                     <th className="p-6 text-center">Porcentaje</th>
                     <th className="p-6 text-center">Estado</th>
                     <th className="p-6 text-center">Tiempo</th>
+                    <th className="p-6 text-center">Detalles</th>
+                  </tr>
+                </thead>
+<tbody>
+  {results.map((r) => (
+    <>
+      <tr key={r.id} className="border-b hover:bg-gray-50">
+        <td className="p-6">{r.name}</td>
+        <td className="p-6">{r.idNumber}</td>
+        <td className="p-6">{new Date(r.date).toLocaleString('es-CO')}</td>
+        <td className="p-6 text-center">{r.correct}/{r.total}</td>
+        <td className="p-6 text-center font-bold" style={{ color: r.passed ? '#059669' : '#dc2626' }}>
+          {r.pct}%
+        </td>
+        <td className="p-6 text-center font-bold">
+          {r.passed ? 'APROBADO' : 'NO APROBADO'}
+        </td>
+        <td className="p-6 text-center">{r.timeUsed}</td>
+        <td className="p-6 text-center">
+          <button
+            onClick={() => setExpandedResultId(expandedResultId === r.id ? null : r.id)}
+            className="bg-indigo-600 text-white py-1 px-3 rounded-lg hover:bg-indigo-700"
+          >
+            {expandedResultId === r.id ? 'Ocultar' : 'Ver Detalles'}
+          </button>
+        </td>
+      </tr>
+      {expandedResultId === r.id && (
+        <tr>
+          <td colSpan={8} className="p-6 bg-gray-50">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full table-auto">
+                <thead>
+                  <tr className="bg-gray-200">
+                    <th className="p-2">Pregunta</th>
+                    <th className="p-2">Respuesta del candidato</th>
+                    <th className="p-2">Respuesta correcta</th>
+                    <th className="p-2">Correcta</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {results.map((r) => (
-                    <tr key={r.id} className="border-b hover:bg-gray-50">
-                      <td className="p-6">{r.name}</td>
-                      <td className="p-6">{r.idNumber}</td>
-                      <td className="p-6">{new Date(r.date).toLocaleString('es-CO')}</td>
-                      <td className="p-6 text-center">{r.correct}/{r.total}</td>
-                      <td className="p-6 text-center font-bold" style={{ color: r.passed ? '#059669' : '#dc2626' }}>
-                        {r.pct}%
-                      </td>
-                      <td className="p-6 text-center font-bold">
-                        {r.passed ? 'APROBADO' : 'NO APROBADO'}
-                      </td>
-                      <td className="p-6 text-center">{r.timeUsed}</td>
+                  {r.details.map((detail, index) => (
+                    <tr key={index} className="border-b">
+                      <td className="p-2">{detail.questionText.slice(0, 50)}...</td>
+                      <td className="p-2">{detail.userAnswer ? String.fromCharCode(65 + detail.userAnswer) : 'No respondida'}</td>
+                      <td className="p-2">{String.fromCharCode(65 + detail.correctAnswer)}</td>
+                      <td className="p-2">{detail.isCorrect ? 'Sí' : 'No'}</td>
                     </tr>
                   ))}
                 </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  ))}
+</tbody>
               </table>
             </div>
           )}
@@ -436,7 +476,7 @@ export default function MathExam() {
   // ====== EXAMEN (CANDIDATO) ======
   if (!started) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" onCopy={(e) => e.preventDefault()} onContextMenu={(e) => e.preventDefault()} style = {user-select: none;}>
         <div className="max-w-2xl w-full bg-white rounded-3xl shadow-2xl p-12 text-center border-8 border-indigo-200">
           <h1 className="text-4xl font-black text-gray-900 mb-8">Datos del Candidato</h1>
           <input
@@ -493,6 +533,97 @@ export default function MathExam() {
       </div>
     );
   }
+  
+  if (started && !finished) {
+  const q = questions[currentQ];
+  const prog = ((currentQ + 1) / questions.length) * 100;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-6">
+      <div className="max-w-4xl mx-auto mb-8">
+        <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-white/50">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center bg-red-100 p-3 rounded-xl border-2 border-red-200 shadow-md">
+                <Clock className="w-6 h-6 text-red-600 mr-2" />
+                <span className="text-2xl font-mono font-bold text-red-700 tracking-wide">{formatTime(timeLeft)}</span>
+              </div>
+              <div className="bg-gradient-to-r from-indigo-100 to-purple-100 px-4 py-2 rounded-xl font-mono font-semibold text-indigo-900 shadow-inner">
+                Pregunta {currentQ + 1} de {questions.length}
+              </div>
+            </div>
+            <div className="flex items-center gap-4 text-sm font-semibold text-gray-800 bg-white/60 px-4 py-2 rounded-xl shadow-sm">
+              <User size={18} />
+              {candidateName}
+              <span className="ml-2 text-indigo-700 font-mono">#{candidateId}</span>
+              {proctoringActive && (
+                <div className="flex items-center gap-1 bg-emerald-200 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
+                  <Monitor size={14} />
+                  Proctoring ON
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
+            <div
+              className="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full shadow-lg transition-all duration-1000"
+              style={{ width: `${prog}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-10 border border-white/50">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Pregunta {currentQ + 1}</h2>
+          <div className="w-16 h-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full mb-8"></div>
+          <p className="text-xl leading-relaxed text-gray-800 mb-10">{q.question}</p>
+
+          <div className="space-y-4 mb-12">
+            {q.options.map((opt, i) => (
+              <button
+                key={i}
+                onClick={() => setSelected(i)}
+                className={`group relative w-full p-6 rounded-2xl border-3 font-medium text-left transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl ${
+                  selected === i
+                    ? 'border-indigo-500 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-indigo-200/50 scale-[1.02]'
+                    : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 shadow-md'
+                }`}
+              >
+                <div className="flex items-center">
+                  <div
+                    className={`w-8 h-8 rounded-2xl border-4 mr-5 flex items-center justify-center font-bold text-sm shadow-md transition-all group-hover:scale-110 ${
+                      selected === i
+                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-300/50'
+                        : 'bg-white border-gray-300 text-gray-600 shadow-sm'
+                    }`}
+                  >
+                    {String.fromCharCode(65 + i)}
+                  </div>
+                  <span className="text-lg leading-relaxed">{opt}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex justify-end pt-6 border-t-2 border-gray-100">
+            <button
+              onClick={handleNext}
+              disabled={selected === null}
+              className={`px-12 py-5 rounded-2xl font-black text-lg shadow-2xl transition-all transform ${
+                selected === null
+                  ? 'bg-gray-400 text-gray-500 cursor-not-allowed shadow-none'
+                  : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-500/50 hover:shadow-indigo-500/75 hover:scale-[1.05] shadow-2xl'
+              }`}
+            >
+              {currentQ < questions.length - 1 ? `Siguiente (${currentQ + 2})` : '🎯 Finalizar Examen'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
   // ====== RESULTADO FINAL ======
   if (finished) {
