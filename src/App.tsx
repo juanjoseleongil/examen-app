@@ -7,6 +7,12 @@ import {
   getDocs,
   query,
   orderBy,
+  doc,
+  updateDoc,
+  onSnapshot,
+  serverTimestamp,
+  deleteDoc,
+  Timestamp,
 } from "firebase/firestore";
 import {
   signInWithEmailAndPassword,
@@ -47,6 +53,16 @@ interface ExamResult {
   pct: string;
   passed: boolean;
   details: QuestionDetail[];
+}
+
+interface ActiveSession {
+  id: string;                    // ID del documento en Firestore
+  name: string;
+  idNumber: string;
+  currentQuestion: number;
+  timeLeft: number;
+  lastActivity: Timestamp;
+  startTime: Timestamp;
 }
 
 const questions = [
@@ -113,6 +129,8 @@ export default function MathExam() {
   const [adminPassword, setAdminPassword] = useState('');
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [loadingResults, setLoadingResults] = useState(false);
+  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   // Verificar estado de autenticación al cargar la app
   useEffect(() => {
@@ -166,6 +184,28 @@ export default function MathExam() {
     }
   }, [mode, isAdminLoggedIn]);
 
+  // Actualizar sesión activa en tiempo real
+  useEffect(() => {
+  if (!sessionId || !started || finished) return;
+
+  const updateSession = async () => {
+    if (!sessionId) return;
+    try {
+      await updateDoc(doc(db, "activeSessions", sessionId), {
+        currentQuestion: currentQ + 1,
+        timeLeft,
+        lastActivity: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error actualizando sesión:", error);
+    }
+  };
+
+  updateSession();
+
+  // Actualizar cada vez que cambie la pregunta o el tiempo
+}, [currentQ, timeLeft, sessionId, started, finished]);
+
   const formatTime = (sec: number): string => {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
@@ -211,31 +251,36 @@ export default function MathExam() {
   };
 
   const finishExam = async () => {
-    const score = calculateScore(answers);
-    const newResult: Omit<ExamResult, 'id'> = {
-      name: candidateName,
-      idNumber: candidateId,
-      date: new Date().toISOString(),
-      timeUsed: formatTime(3600 - timeLeft),
-      ip: 'Simulada (producción: usaría IP real)',
-      userAgent: navigator.userAgent,
-      correct: score.correct,
-      total: score.total,
-      pct: score.pct,
-      passed: score.passed,
-      details: score.details,
-    };
-
-    try {
-      await addDoc(collection(db, "results"), newResult);
-    } catch (error) {
-      console.error("Error guardando resultado:", error);
-      alert("Hubo un error al guardar el resultado. Revisa la consola.");
-    }
-
-    setFinished(true);
-    setProctoringActive(false);
+  const score = calculateScore(answers);
+  const newResult: Omit<ExamResult, 'id'> = {
+    name: candidateName,
+    idNumber: candidateId,
+    date: new Date().toISOString(),
+    timeUsed: formatTime(3600 - timeLeft),
+    ip: 'Simulada (producción: usaría IP real)',
+    userAgent: navigator.userAgent,
+    correct: score.correct,
+    total: score.total,
+    pct: score.pct,
+    passed: score.passed,
+    details: score.details,
   };
+
+  try {
+    await addDoc(collection(db, "results"), newResult);
+
+    // Eliminar sesión activa
+    if (sessionId) {
+      await deleteDoc(doc(db, "activeSessions", sessionId));
+    }
+  } catch (error) {
+    console.error("Error finalizando:", error);
+    alert("Error al guardar. Revisa consola.");
+  }
+
+  setFinished(true);
+  setProctoringActive(false);
+};
 
   // ====== PANTALLA DE SELECCIÓN ======
   if (mode === 'select') {
@@ -305,65 +350,114 @@ export default function MathExam() {
 
   // ====== PANEL ADMINISTRADOR ======
   if (mode === 'admin') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-5xl font-black text-gray-900">Panel Administrador</h1>
-            <button
-              onClick={async () => {
-                await signOut(auth);
-                setIsAdminLoggedIn(false);
-                setMode('select');
-              }}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg"
-            >
-              Cerrar Sesión
-            </button>
-          </div>
+  // Escuchar sesiones activas en tiempo real
+  useEffect(() => {
+    const q = query(collection(db, "activeSessions"), orderBy("lastActivity", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const sessions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ActiveSession[];
+      setActiveSessions(sessions);
+    });
+    return () => unsubscribe();
+  }, []);
 
-          {loadingResults ? (
-            <p className="text-center text-2xl">Cargando resultados...</p>
-          ) : results.length === 0 ? (
-            <p className="text-center text-2xl text-gray-600">No hay resultados aún.</p>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-5xl font-black text-gray-900">Panel Administrador</h1>
+          <button
+            onClick={async () => {
+              await signOut(auth);
+              setIsAdminLoggedIn(false);
+              setMode('select');
+            }}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg"
+          >
+            Cerrar Sesión
+          </button>
+        </div>
+
+        {/* CANDIDATOS EN VIVO */}
+        <div className="mb-12">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center">
+            <Monitor className="w-10 h-10 mr-4 text-emerald-600" />
+            Candidatos en vivo ({activeSessions.length})
+          </h2>
+          {activeSessions.length === 0 ? (
+            <p className="text-xl text-gray-600">No hay candidatos activos en este momento.</p>
           ) : (
-            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
-                  <tr>
-                    <th className="p-6 text-left">Nombre</th>
-                    <th className="p-6 text-left">Cédula</th>
-                    <th className="p-6 text-left">Fecha</th>
-                    <th className="p-6 text-center">Correctas</th>
-                    <th className="p-6 text-center">Porcentaje</th>
-                    <th className="p-6 text-center">Estado</th>
-                    <th className="p-6 text-center">Tiempo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.map((r) => (
-                    <tr key={r.id} className="border-b hover:bg-gray-50">
-                      <td className="p-6">{r.name}</td>
-                      <td className="p-6">{r.idNumber}</td>
-                      <td className="p-6">{new Date(r.date).toLocaleString('es-CO')}</td>
-                      <td className="p-6 text-center">{r.correct}/{r.total}</td>
-                      <td className="p-6 text-center font-bold" style={{ color: r.passed ? '#059669' : '#dc2626' }}>
-                        {r.pct}%
-                      </td>
-                      <td className="p-6 text-center font-bold">
-                        {r.passed ? 'APROBADO' : 'NO APROBADO'}
-                      </td>
-                      <td className="p-6 text-center">{r.timeUsed}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {activeSessions.map(session => (
+                <div key={session.id} className="bg-white rounded-2xl shadow-xl p-6 border-l-4 border-emerald-500">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-gray-900">{session.name}</h3>
+                    <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-sm font-bold animate-pulse">
+                      ACTIVO
+                    </span>
+                  </div>
+                  <p className="text-gray-600 mb-2">Cédula: {session.idNumber}</p>
+                  <p className="text-lg font-semibold mb-2">
+                    Pregunta: <span className="text-indigo-600">{session.currentQuestion}/{questions.length}</span>
+                  </p>
+                  <p className="text-lg font-semibold mb-2">
+                    Tiempo restante: <span className="text-red-600">{formatTime(session.timeLeft)}</span>
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Última actividad: {session.lastActivity?.toDate?.().toLocaleTimeString() || 'Ahora'}
+                  </p>
+                </div>
+              ))}
             </div>
           )}
         </div>
+
+        {/* RESULTADOS FINALIZADOS */}
+        <h2 className="text-3xl font-bold text-gray-900 mb-6">Resultados finalizados</h2>
+        {loadingResults ? (
+          <p className="text-center text-2xl">Cargando resultados...</p>
+        ) : results.length === 0 ? (
+          <p className="text-center text-2xl text-gray-600">No hay resultados aún.</p>
+        ) : (
+          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+                <tr>
+                  <th className="p-6 text-left">Nombre</th>
+                  <th className="p-6 text-left">Cédula</th>
+                  <th className="p-6 text-left">Fecha</th>
+                  <th className="p-6 text-center">Correctas</th>
+                  <th className="p-6 text-center">Porcentaje</th>
+                  <th className="p-6 text-center">Estado</th>
+                  <th className="p-6 text-center">Tiempo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((r) => (
+                  <tr key={r.id} className="border-b hover:bg-gray-50">
+                    <td className="p-6">{r.name}</td>
+                    <td className="p-6">{r.idNumber}</td>
+                    <td className="p-6">{new Date(r.date).toLocaleString('es-CO')}</td>
+                    <td className="p-6 text-center">{r.correct}/{r.total}</td>
+                    <td className="p-6 text-center font-bold" style={{ color: r.passed ? '#059669' : '#dc2626' }}>
+                      {r.pct}%
+                    </td>
+                    <td className="p-6 text-center font-bold">
+                      {r.passed ? 'APROBADO' : 'NO APROBADO'}
+                    </td>
+                    <td className="p-6 text-center">{r.timeUsed}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   // ====== EXAMEN (CANDIDATO) ======
   if (!started) {
@@ -386,24 +480,42 @@ export default function MathExam() {
             className="w-full p-4 mb-8 rounded-xl border-2 border-gray-300 focus:border-indigo-500 outline-none text-lg"
           />
           <button
-            onClick={() => {
-              if (!candidateName || !candidateId) {
-                alert("Por favor ingresa nombre y cédula");
-                return;
-              }
-              setStarted(true);
-              setProctoringActive(true);
-            }}
-            disabled={!candidateName || !candidateId}
-            className={`w-full py-6 rounded-2xl font-black text-2xl shadow-2xl transition-all ${
-              candidateName && candidateId
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white cursor-pointer'
-                : 'bg-gray-400 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            <Play className="w-10 h-10 mr-4 inline" />
-            ¡INICIAR EXAMEN!
-          </button>
+  onClick={async () => {
+    if (!candidateName || !candidateId) {
+      alert("Por favor ingresa nombre y cédula");
+      return;
+    }
+
+    try {
+      // Crear sesión activa en Firestore
+      const sessionRef = await addDoc(collection(db, "activeSessions"), {
+        name: candidateName,
+        idNumber: candidateId,
+        currentQuestion: 1,
+        timeLeft: 3600,
+        lastActivity: serverTimestamp(),
+        startTime: serverTimestamp(),
+      });
+      setSessionId(sessionRef.id);
+    } catch (error) {
+      console.error("Error creando sesión:", error);
+      alert("Error al iniciar proctoring. Intenta de nuevo.");
+      return;
+    }
+
+    setStarted(true);
+    setProctoringActive(true);
+  }}
+  disabled={!candidateName || !candidateId}
+  className={`w-full py-6 rounded-2xl font-black text-2xl shadow-2xl transition-all ${
+    candidateName && candidateId
+      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white cursor-pointer'
+      : 'bg-gray-400 text-gray-500 cursor-not-allowed'
+  }`}
+>
+  <Play className="w-10 h-10 mr-4 inline" />
+  ¡INICIAR EXAMEN!
+</button>
 
           {proctoringActive && (
             <div className="mt-6 p-4 bg-emerald-100 border border-emerald-300 rounded-xl text-center">
