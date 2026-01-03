@@ -37,24 +37,23 @@
   }
 }
 
-#exc1 {
-  user-select: none;
-  -webkit-user-select: none; /* Safari */
-  -moz-user-select: none;    /* Firefox */
-  -ms-user-select: none;     /* Internet Explorer/Edge */
+#exc1, #exc1 * {
+  user-select: none !important;
+  -webkit-user-select: none !important; /* Safari */
+  -moz-user-select: none !important;    /* Firefox */
+  -ms-user-select: none !important;     /* Internet Explorer/Edge */
 }
 
-#exc2 {
-  user-select: none;
-  -webkit-user-select: none; /* Safari */
-  -moz-user-select: none;    /* Firefox */
-  -ms-user-select: none;     /* Internet Explorer/Edge */
+#exc2, #exc2 * {
+  user-select: none !important;
+  -webkit-user-select: none !important; /* Safari */
+  -moz-user-select: none !important;    /* Firefox */
+  -ms-user-select: none !important;     /* Internet Explorer/Edge */
 }
 
-#exc1 button {
-  user-select: text;
-}
-
-#exc2 button {
-  user-select: text;
+#exc3, #exc3 * {
+  user-select: none !important;
+  -webkit-user-select: none !important; /* Safari */
+  -moz-user-select: none !important;    /* Firefox */
+  -ms-user-select: none !important;     /* Internet Explorer/Edge */
 }

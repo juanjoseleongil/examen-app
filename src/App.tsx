@@ -275,7 +275,7 @@ export default function MathExam() {
   // ====== RENDER (TODOS LOS RETURNS AQUÍ) ======
   if (mode === 'select') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" id = "exc2"
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" id = "exc1"
       onCopy={(e) => e.preventDefault()}
       onContextMenu={(e) => e.preventDefault()}
       >
@@ -479,7 +479,7 @@ export default function MathExam() {
   // ====== EXAMEN (CANDIDATO) ======
   if (!started) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" id = "exc1"
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" id = "exc2"
       onCopy={(e) => e.preventDefault()}
       onContextMenu={(e) => e.preventDefault()}
       >
@@ -545,7 +545,9 @@ export default function MathExam() {
   const prog = ((currentQ + 1) / questions.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-6" id = "exc3"
+      onCopy={(e) => e.preventDefault()}
+      onContextMenu={(e) => e.preventDefault()}>
       <div className="max-w-4xl mx-auto mb-8">
         <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-white/50">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
