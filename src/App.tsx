@@ -114,97 +114,90 @@ const questions = [
 ];
 
 export default function MathExam() {
+  // TODOS LOS STATES AL INICIO
   const [mode, setMode] = useState<'select' | 'exam' | 'admin' | 'admin-login'>('select');
   const [started, setStarted] = useState(false);
   const [finished, setFinished] = useState(false);
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [selected, setSelected] = useState<number | null>(null);
-  const [timeLeft, setTimeLeft] = useState(3600); // 60 minutos
+  const [timeLeft, setTimeLeft] = useState(3600);
   const [candidateName, setCandidateName] = useState('');
   const [candidateId, setCandidateId] = useState('');
   const [results, setResults] = useState<ExamResult[]>([]);
+  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([]);
   const [proctoringActive, setProctoringActive] = useState(false);
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [loadingResults, setLoadingResults] = useState(false);
-  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
-  // Verificar estado de autenticación al cargar la app
+  // TODOS LOS EFFECTS AL INICIO, CON LÓGICA CONDICIONAL DENTRO
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setIsAdminLoggedIn(true);
-        if (mode === 'admin') loadResults();
-      } else {
-        setIsAdminLoggedIn(false);
-      }
+      setIsAdminLoggedIn(!!user);
     });
     return () => unsubscribe();
-  }, [mode]);
+  }, []);
 
-  // Temporizador del examen
   useEffect(() => {
     if (started && !finished && timeLeft > 0) {
       const timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            finishExam();
-            return 0;
-          }
-          return prev - 1;
-        });
+        setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
       }, 1000);
       return () => clearInterval(timer);
+    } else if (timeLeft === 0 && started && !finished) {
+      finishExam();
     }
   }, [started, finished, timeLeft]);
 
-  // Cargar resultados desde Firestore cuando el admin está logueado
-  const loadResults = async () => {
-    setLoadingResults(true);
-    try {
-      const q = query(collection(db, "results"), orderBy("date", "desc"));
-      const querySnapshot = await getDocs(q);
-      const loadedResults = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as ExamResult[];
-      setResults(loadedResults);
-    } catch (error) {
-      console.error("Error cargando resultados:", error);
-    }
-    setLoadingResults(false);
-  };
-
   useEffect(() => {
-    if (mode === 'admin' && isAdminLoggedIn) {
-      loadResults();
-    }
+    if (mode !== 'admin' || !isAdminLoggedIn) return;
+    setLoadingResults(true);
+    const q = query(collection(db, "results"), orderBy("date", "desc"));
+    getDocs(q)
+      .then((querySnapshot) => {
+        const loadedResults = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as ExamResult[];
+        setResults(loadedResults);
+      })
+      .catch((error) => console.error("Error loading results:", error))
+      .finally(() => setLoadingResults(false));
   }, [mode, isAdminLoggedIn]);
 
-  // Actualizar sesión activa en tiempo real
   useEffect(() => {
-  if (!sessionId || !started || finished) return;
+    if (mode !== 'admin' || !isAdminLoggedIn) return;
+    const q = query(collection(db, "activeSessions"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const sessions = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as ActiveSession[];
+      setActiveSessions(sessions);
+    });
+    return () => unsubscribe();
+  }, [mode, isAdminLoggedIn]);
 
-  const updateSession = async () => {
-    if (!sessionId) return;
-    try {
-      await updateDoc(doc(db, "activeSessions", sessionId), {
-        currentQuestion: currentQ + 1,
-        timeLeft,
-        lastActivity: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error("Error actualizando sesión:", error);
-    }
-  };
+  useEffect(() => {
+    if (!sessionId || !started || finished) return;
 
-  updateSession();
+    const updateSession = async () => {
+      try {
+        await updateDoc(doc(db, "activeSessions", sessionId), {
+          currentQuestion: currentQ + 1,
+          timeLeft,
+          lastActivity: serverTimestamp(),
+        });
+      } catch (error) {
+        console.error("Error updating session:", error);
+      }
+    };
 
-  // Actualizar cada vez que cambie la pregunta o el tiempo
-}, [currentQ, timeLeft, sessionId, started, finished]);
+    updateSession();
+  }, [currentQ, timeLeft, sessionId, started, finished]);
 
   const formatTime = (sec: number): string => {
     const m = Math.floor(sec / 60);
@@ -215,7 +208,6 @@ export default function MathExam() {
   const calculateScore = (ans: Record<number, number>) => {
     let correct = 0;
     const details: QuestionDetail[] = [];
-
     questions.forEach((q, i) => {
       const userAnswer = ans[i];
       const isCorrect = userAnswer === q.correct;
@@ -228,7 +220,6 @@ export default function MathExam() {
         questionText: q.question,
       });
     });
-
     const pct = (correct / questions.length) * 100;
     return {
       correct,
@@ -251,38 +242,36 @@ export default function MathExam() {
   };
 
   const finishExam = async () => {
-  const score = calculateScore(answers);
-  const newResult: Omit<ExamResult, 'id'> = {
-    name: candidateName,
-    idNumber: candidateId,
-    date: new Date().toISOString(),
-    timeUsed: formatTime(3600 - timeLeft),
-    ip: 'Simulada (producción: usaría IP real)',
-    userAgent: navigator.userAgent,
-    correct: score.correct,
-    total: score.total,
-    pct: score.pct,
-    passed: score.passed,
-    details: score.details,
+    const score = calculateScore(answers);
+    const newResult: Omit<ExamResult, 'id'> = {
+      name: candidateName,
+      idNumber: candidateId,
+      date: new Date().toISOString(),
+      timeUsed: formatTime(3600 - timeLeft),
+      ip: 'Simulada (producción: usaría IP real)',
+      userAgent: navigator.userAgent,
+      correct: score.correct,
+      total: score.total,
+      pct: score.pct,
+      passed: score.passed,
+      details: score.details,
+    };
+
+    try {
+      await addDoc(collection(db, "results"), newResult);
+      if (sessionId) {
+        await deleteDoc(doc(db, "activeSessions", sessionId));
+      }
+    } catch (error) {
+      console.error("Error finalizando:", error);
+      alert("Error al guardar. Revisa consola.");
+    }
+
+    setFinished(true);
+    setProctoringActive(false);
   };
 
-  try {
-    await addDoc(collection(db, "results"), newResult);
-
-    // Eliminar sesión activa
-    if (sessionId) {
-      await deleteDoc(doc(db, "activeSessions", sessionId));
-    }
-  } catch (error) {
-    console.error("Error finalizando:", error);
-    alert("Error al guardar. Revisa consola.");
-  }
-
-  setFinished(true);
-  setProctoringActive(false);
-};
-
-  // ====== PANTALLA DE SELECCIÓN ======
+  // ====== RENDER (TODOS LOS RETURNS AQUÍ) ======
   if (mode === 'select') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center">
@@ -309,7 +298,6 @@ export default function MathExam() {
     );
   }
 
-  // ====== LOGIN ADMINISTRADOR ======
   if (mode === 'admin-login') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center">
@@ -348,116 +336,102 @@ export default function MathExam() {
     );
   }
 
-  // ====== PANEL ADMINISTRADOR ======
   if (mode === 'admin') {
-  // Escuchar sesiones activas en tiempo real
-  useEffect(() => {
-    const q = query(collection(db, "activeSessions"), orderBy("lastActivity", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const sessions = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as ActiveSession[];
-      setActiveSessions(sessions);
-    });
-    return () => unsubscribe();
-  }, []);
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-5xl font-black text-gray-900">Panel Administrador</h1>
+            <button
+              onClick={async () => {
+                await signOut(auth);
+                setIsAdminLoggedIn(false);
+                setMode('select');
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg"
+            >
+              Cerrar Sesión
+            </button>
+          </div>
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-5xl font-black text-gray-900">Panel Administrador</h1>
-          <button
-            onClick={async () => {
-              await signOut(auth);
-              setIsAdminLoggedIn(false);
-              setMode('select');
-            }}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg"
-          >
-            Cerrar Sesión
-          </button>
-        </div>
-
-        {/* CANDIDATOS EN VIVO */}
-        <div className="mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center">
-            <Monitor className="w-10 h-10 mr-4 text-emerald-600" />
-            Candidatos en vivo ({activeSessions.length})
-          </h2>
-          {activeSessions.length === 0 ? (
-            <p className="text-xl text-gray-600">No hay candidatos activos en este momento.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {activeSessions.map(session => (
-                <div key={session.id} className="bg-white rounded-2xl shadow-xl p-6 border-l-4 border-emerald-500">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-bold text-gray-900">{session.name}</h3>
-                    <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-sm font-bold animate-pulse">
-                      ACTIVO
-                    </span>
+          {/* CANDIDATOS EN VIVO */}
+          <div className="mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center">
+              <Monitor className="w-10 h-10 mr-4 text-emerald-600" />
+              Candidatos en vivo ({activeSessions.length})
+            </h2>
+            {activeSessions.length === 0 ? (
+              <p className="text-xl text-gray-600">No hay candidatos activos en este momento.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {activeSessions.map(session => (
+                  <div key={session.id} className="bg-white rounded-2xl shadow-xl p-6 border-l-4 border-emerald-500">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-bold text-gray-900">{session.name}</h3>
+                      <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-sm font-bold animate-pulse">
+                        ACTIVO
+                      </span>
+                    </div>
+                    <p className="text-gray-600 mb-2">Cédula: {session.idNumber}</p>
+                    <p className="text-lg font-semibold mb-2">
+                      Pregunta: <span className="text-indigo-600">{session.currentQuestion}/{questions.length}</span>
+                    </p>
+                    <p className="text-lg font-semibold mb-2">
+                      Tiempo restante: <span className="text-red-600">{formatTime(session.timeLeft)}</span>
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Última actividad: {session.lastActivity?.toDate?.().toLocaleTimeString() || 'Ahora'}
+                    </p>
                   </div>
-                  <p className="text-gray-600 mb-2">Cédula: {session.idNumber}</p>
-                  <p className="text-lg font-semibold mb-2">
-                    Pregunta: <span className="text-indigo-600">{session.currentQuestion}/{questions.length}</span>
-                  </p>
-                  <p className="text-lg font-semibold mb-2">
-                    Tiempo restante: <span className="text-red-600">{formatTime(session.timeLeft)}</span>
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Última actividad: {session.lastActivity?.toDate?.().toLocaleTimeString() || 'Ahora'}
-                  </p>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* RESULTADOS FINALIZADOS */}
+          <h2 className="text-3xl font-bold text-gray-900 mb-6">Resultados finalizados</h2>
+          {loadingResults ? (
+            <p className="text-center text-2xl">Cargando resultados...</p>
+          ) : results.length === 0 ? (
+            <p className="text-center text-2xl text-gray-600">No hay resultados aún.</p>
+          ) : (
+            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+                  <tr>
+                    <th className="p-6 text-left">Nombre</th>
+                    <th className="p-6 text-left">Cédula</th>
+                    <th className="p-6 text-left">Fecha</th>
+                    <th className="p-6 text-center">Correctas</th>
+                    <th className="p-6 text-center">Porcentaje</th>
+                    <th className="p-6 text-center">Estado</th>
+                    <th className="p-6 text-center">Tiempo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map((r) => (
+                    <tr key={r.id} className="border-b hover:bg-gray-50">
+                      <td className="p-6">{r.name}</td>
+                      <td className="p-6">{r.idNumber}</td>
+                      <td className="p-6">{new Date(r.date).toLocaleString('es-CO')}</td>
+                      <td className="p-6 text-center">{r.correct}/{r.total}</td>
+                      <td className="p-6 text-center font-bold" style={{ color: r.passed ? '#059669' : '#dc2626' }}>
+                        {r.pct}%
+                      </td>
+                      <td className="p-6 text-center font-bold">
+                        {r.passed ? 'APROBADO' : 'NO APROBADO'}
+                      </td>
+                      <td className="p-6 text-center">{r.timeUsed}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
-
-        {/* RESULTADOS FINALIZADOS */}
-        <h2 className="text-3xl font-bold text-gray-900 mb-6">Resultados finalizados</h2>
-        {loadingResults ? (
-          <p className="text-center text-2xl">Cargando resultados...</p>
-        ) : results.length === 0 ? (
-          <p className="text-center text-2xl text-gray-600">No hay resultados aún.</p>
-        ) : (
-          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
-                <tr>
-                  <th className="p-6 text-left">Nombre</th>
-                  <th className="p-6 text-left">Cédula</th>
-                  <th className="p-6 text-left">Fecha</th>
-                  <th className="p-6 text-center">Correctas</th>
-                  <th className="p-6 text-center">Porcentaje</th>
-                  <th className="p-6 text-center">Estado</th>
-                  <th className="p-6 text-center">Tiempo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((r) => (
-                  <tr key={r.id} className="border-b hover:bg-gray-50">
-                    <td className="p-6">{r.name}</td>
-                    <td className="p-6">{r.idNumber}</td>
-                    <td className="p-6">{new Date(r.date).toLocaleString('es-CO')}</td>
-                    <td className="p-6 text-center">{r.correct}/{r.total}</td>
-                    <td className="p-6 text-center font-bold" style={{ color: r.passed ? '#059669' : '#dc2626' }}>
-                      {r.pct}%
-                    </td>
-                    <td className="p-6 text-center font-bold">
-                      {r.passed ? 'APROBADO' : 'NO APROBADO'}
-                    </td>
-                    <td className="p-6 text-center">{r.timeUsed}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   // ====== EXAMEN (CANDIDATO) ======
   if (!started) {
@@ -480,56 +454,49 @@ export default function MathExam() {
             className="w-full p-4 mb-8 rounded-xl border-2 border-gray-300 focus:border-indigo-500 outline-none text-lg"
           />
           <button
-  onClick={async () => {
-    if (!candidateName || !candidateId) {
-      alert("Por favor ingresa nombre y cédula");
-      return;
-    }
+            onClick={async () => {
+              if (!candidateName || !candidateId) {
+                alert("Por favor ingresa nombre y cédula");
+                return;
+              }
 
-    try {
-      // Crear sesión activa en Firestore
-      const sessionRef = await addDoc(collection(db, "activeSessions"), {
-        name: candidateName,
-        idNumber: candidateId,
-        currentQuestion: 1,
-        timeLeft: 3600,
-        lastActivity: serverTimestamp(),
-        startTime: serverTimestamp(),
-      });
-      setSessionId(sessionRef.id);
-    } catch (error) {
-      console.error("Error creando sesión:", error);
-      alert("Error al iniciar proctoring. Intenta de nuevo.");
-      return;
-    }
+              try {
+                const sessionRef = await addDoc(collection(db, "activeSessions"), {
+                  name: candidateName,
+                  idNumber: candidateId,
+                  currentQuestion: 1,
+                  timeLeft: 3600,
+                  lastActivity: serverTimestamp(),
+                  startTime: serverTimestamp(),
+                });
+                setSessionId(sessionRef.id);
+              } catch (error) {
+                console.error("Error creando sesión:", error);
+                alert("Error al iniciar proctoring. Intenta de nuevo.");
+                return;
+              }
 
-    setStarted(true);
-    setProctoringActive(true);
-  }}
-  disabled={!candidateName || !candidateId}
-  className={`w-full py-6 rounded-2xl font-black text-2xl shadow-2xl transition-all ${
-    candidateName && candidateId
-      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white cursor-pointer'
-      : 'bg-gray-400 text-gray-500 cursor-not-allowed'
-  }`}
->
-  <Play className="w-10 h-10 mr-4 inline" />
-  ¡INICIAR EXAMEN!
-</button>
-
-          {proctoringActive && (
-            <div className="mt-6 p-4 bg-emerald-100 border border-emerald-300 rounded-xl text-center">
-              <p className="font-semibold text-emerald-900">✅ Proctoring activado - Monitoreo en vivo</p>
-            </div>
-          )}
+              setStarted(true);
+              setProctoringActive(true);
+            }}
+            disabled={!candidateName || !candidateId}
+            className={`w-full py-6 rounded-2xl font-black text-2xl shadow-2xl transition-all ${
+              candidateName && candidateId
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white cursor-pointer'
+                : 'bg-gray-400 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            <Play className="w-10 h-10 mr-4 inline" />
+            ¡INICIAR EXAMEN!
+          </button>
         </div>
       </div>
     );
   }
 
+  // ====== RESULTADO FINAL ======
   if (finished) {
     const score = calculateScore(answers);
-
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-50 p-8 flex items-center justify-center">
         <div className="max-w-2xl w-full bg-white rounded-3xl shadow-2xl p-12 text-center border-8 border-emerald-200">
@@ -574,93 +541,5 @@ export default function MathExam() {
     );
   }
 
-  // ====== EXAMEN EN PROGRESO ======
-  const q = questions[currentQ];
-  const prog = ((currentQ + 1) / questions.length) * 100;
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-6">
-      <div className="max-w-4xl mx-auto mb-8">
-        <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-white/50">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center bg-red-100 p-3 rounded-xl border-2 border-red-200 shadow-md">
-                <Clock className="w-6 h-6 text-red-600 mr-2" />
-                <span className="text-2xl font-mono font-bold text-red-700 tracking-wide">{formatTime(timeLeft)}</span>
-              </div>
-              <div className="bg-gradient-to-r from-indigo-100 to-purple-100 px-4 py-2 rounded-xl font-mono font-semibold text-indigo-900 shadow-inner">
-                Pregunta {currentQ + 1} de {questions.length}
-              </div>
-            </div>
-            <div className="flex items-center gap-4 text-sm font-semibold text-gray-800 bg-white/60 px-4 py-2 rounded-xl shadow-sm">
-              <User size={18} />
-              {candidateName}
-              <span className="ml-2 text-indigo-700 font-mono">#{candidateId}</span>
-              {proctoringActive && (
-                <div className="flex items-center gap-1 bg-emerald-200 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
-                  <Monitor size={14} />
-                  Proctoring ON
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
-            <div
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full shadow-lg transition-all duration-1000"
-              style={{ width: `${prog}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-10 border border-white/50">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Pregunta {currentQ + 1}</h2>
-          <div className="w-16 h-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full mb-8"></div>
-          <p className="text-xl leading-relaxed text-gray-800 mb-10">{q.question}</p>
-
-          <div className="space-y-4 mb-12">
-            {q.options.map((opt, i) => (
-              <button
-                key={i}
-                onClick={() => setSelected(i)}
-                className={`group relative w-full p-6 rounded-2xl border-3 font-medium text-left transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl ${
-                  selected === i
-                    ? 'border-indigo-500 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-indigo-200/50 scale-[1.02]'
-                    : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 shadow-md'
-                }`}
-              >
-                <div className="flex items-center">
-                  <div
-                    className={`w-8 h-8 rounded-2xl border-4 mr-5 flex items-center justify-center font-bold text-sm shadow-md transition-all group-hover:scale-110 ${
-                      selected === i
-                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-300/50'
-                        : 'bg-white border-gray-300 text-gray-600 shadow-sm'
-                    }`}
-                  >
-                    {String.fromCharCode(65 + i)}
-                  </div>
-                  <span className="text-lg leading-relaxed">{opt}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <div className="flex justify-end pt-6 border-t-2 border-gray-100">
-            <button
-              onClick={handleNext}
-              disabled={selected === null}
-              className={`px-12 py-5 rounded-2xl font-black text-lg shadow-2xl transition-all transform ${
-                selected === null
-                  ? 'bg-gray-400 text-gray-500 cursor-not-allowed shadow-none'
-                  : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-500/50 hover:shadow-indigo-500/75 hover:scale-[1.05] shadow-2xl'
-              }`}
-            >
-              {currentQ < questions.length - 1 ? `Siguiente (${currentQ + 2})` : '🎯 Finalizar Examen'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return null; // No debería llegar aquí
 }
