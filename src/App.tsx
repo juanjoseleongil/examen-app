@@ -56,6 +56,8 @@ interface QuestionDetail {
   correctAnswer: number;
   isCorrect: boolean;
   questionText: string;
+  userAnswerText?: string;
+  correctAnswerText?: string;
 }
 
 interface ExamResult {
@@ -74,6 +76,7 @@ interface ExamResult {
   violations: number;
   asignatura: string;
   redaccion: string;
+  redaccionId?: number | null;
 }
 
 interface ActiveSession {
@@ -120,31 +123,36 @@ export default function MathExam() {
   const [proctorWarningShown, setProctorWarningShown] = useState(false);
   const [justHandledViolation, setJustHandledViolation] = useState(false);
   const [violationMessage, setViolationMessage] = useState('');
+  const [alertDiv, setAlertDiv] = useState('');
   const [selectedAsignatura, setSelectedAsignatura] = useState('');
   const [currentQuestions, setCurrentQuestions] = useState(questionsMAT);
   const [redaccionText, setRedaccionText] = useState('');
   const [redaccionSelected, setRedaccionSelected] = useState<number | null>(null);
   const [showWriting, setShowWriting] = useState(false);
   const [savingAnswer, setSavingAnswer] = useState(false);
+  
+  const isFinishing = React.useRef(false);
 
   // FUNCIONES LÓGICAS
   const calculateScore = useCallback((ans: Record<number, number>) => {
-    let correct = 0;
-    const details: QuestionDetail[] = [];
+  let correct = 0;
+  const details: QuestionDetail[] = [];
+  currentQuestions.forEach((q, i) => {
+    const userAnswer = ans[i];
+    const isCorrect = userAnswer === q.correct;
+    if (isCorrect) correct++;
     
-    currentQuestions.forEach((q, i) => {
-      const userAnswer = ans[i];
-      const isCorrect = userAnswer === q.correct;
-      if (isCorrect) correct++;
-      
-      details.push({
-        question: q.id,
-        userAnswer: userAnswer ?? undefined,
-        correctAnswer: q.correct,
-        isCorrect,
-        questionText: q.question,
-      });
+    details.push({
+      question: q.id,
+      userAnswer: userAnswer ?? undefined,
+      correctAnswer: q.correct,
+      isCorrect,
+      questionText: q.question,
+      // Guardamos el texto literal de las opciones
+      userAnswerText: userAnswer !== undefined ? q.options[userAnswer] : 'Sin respuesta',
+      correctAnswerText: q.options[q.correct],
     });
+  });
     
     const pct = (correct / currentQuestions.length) * 100;
     return {
@@ -157,37 +165,37 @@ export default function MathExam() {
   }, [currentQuestions]);
 
   const finishExam = useCallback(async () => {
-    const score = calculateScore(answers);
-    const newResult: Omit<ExamResult, 'id'> = {
-      name: candidateName,
-      idNumber: candidateId,
-      date: new Date().toISOString(),
-      timeUsed: formatTime(3600 - timeLeft),
-      ip: await fetch('https://api.ipify.org?format=json')
-        .then(res => res.json())
-        .then(data => data.ip)
-        .catch(() => 'IP no disponible'),
-      userAgent: navigator.userAgent,
-      correct: score.correct,
-      total: score.total,
-      pct: score.pct,
-      passed: score.passed,
-      details: score.details,
-      violations: proctorViolations,
-      asignatura: selectedAsignatura,
-      redaccion: redaccionText.trim(),
-    };
+  // Guardia: Si ya se está finalizando o ya terminó, salir.
+  if (isFinishing.current || finished) return;
+  isFinishing.current = true;
 
-    try {
-      await addDoc(collection(db, "results"), newResult);
-      if (sessionId) {
-        await deleteDoc(doc(db, "activeSessions", sessionId));
-      }
-    } catch (error) {
-      console.error("Error finalizando:", error);
-      alert("Error al guardar.");
-    }
+  const score = calculateScore(answers);
+  const newResult: Omit<ExamResult, 'id'> = {
+    name: candidateName,
+    idNumber: candidateId,
+    date: new Date().toISOString(),
+    timeUsed: formatTime(3600 - timeLeft),
+    ip: await fetch('https://api.ipify.org?format=json')
+      .then(res => res.json())
+      .then(data => data.ip)
+      .catch(() => 'IP no disponible'),
+    userAgent: navigator.userAgent,
+    correct: score.correct,
+    total: score.total,
+    pct: score.pct,
+    passed: score.passed,
+    details: score.details,
+    violations: proctorViolations,
+    asignatura: selectedAsignatura,
+    redaccion: redaccionText.trim(),
+    redaccionId: redaccionSelected,
+  };
 
+  try {
+    // Guardamos el resultado
+    await addDoc(collection(db, "results"), newResult);
+    
+    // Si hay reincidencia, marcamos como baneado
     if (proctorViolations >= MAX_VIOLATIONS) {
       await addDoc(collection(db, "bannedCandidates"), {
         idNumber: candidateId.trim().toLowerCase(),
@@ -197,9 +205,19 @@ export default function MathExam() {
       });
     }
 
-    setFinished(true);
-    setProctoringActive(false);
-  }, [calculateScore, answers, candidateName, candidateId, timeLeft, proctorViolations, selectedAsignatura, redaccionText, sessionId]);
+    if (sessionId) {
+      await deleteDoc(doc(db, "activeSessions", sessionId));
+    }
+  } catch (error) {
+    console.error("Error finalizando:", error);
+    alert("Error al guardar.");
+    isFinishing.current = false; // Permitir reintento si falló la red
+    return;
+  }
+
+  setFinished(true);
+  setProctoringActive(false);
+}, [calculateScore, answers, candidateName, candidateId, timeLeft, proctorViolations, selectedAsignatura, redaccionSelected, redaccionText, sessionId, finished]);
 
   // TODOS LOS EFFECTS AL INICIO
   useEffect(() => {
@@ -347,12 +365,15 @@ export default function MathExam() {
     
     // FASE 2: Validación de la redacción
     if (!redaccionSelected) {
-      alert("Debe seleccionar una consigna de redacción antes de finalizar.");
+      setAlertDiv("Debe seleccionar una consigna de redacción antes de finalizar.");
       return;
     }
     
+    setSavingAnswer(true); // Desactiva el botón inmediatamente
+    await finishExam();    // Esperamos a que la función termine
+    
     //if (redaccionText.trim().length < 200) {
-      //alert("La redacción debe tener al menos 200 caracteres. Por favor complete su respuesta.");
+      //setAlertDiv("La redacción debe tener al menos 200 caracteres. Por favor complete su respuesta.");
       //return;
     //}
     
@@ -527,7 +548,7 @@ export default function MathExam() {
                     <th className="p-6 text-center">Porcentaje</th>
                     <th className="p-6 text-center">Estado</th>
                     <th className="p-6 text-center">Tiempo</th>
-                    <th className="p-6 text-center">Violaciones</th>
+                    <th className="p-6 text-center">Infracciones</th>
                     <th className="p-6 text-center">Detalles</th>
                   </tr>
                 </thead>
@@ -562,8 +583,8 @@ export default function MathExam() {
                       
                       {expandedResultId === r.id && (
                         <tr>
-                          <td colSpan={10} className="p-6 bg-card-50">
-                            <div className="max-h-96 overflow-y-auto">
+                          <td colSpan={10} className="p-8 bg-slate-200/50 shadow-inner">
+                            <div className="max-h-96 overflow-y-auto shadow-xl">
                               <h3 className="text-2xl font-bold mb-6">Detalles por Grado</h3>
                               
                               {Array.from({ length: 9 }, (_, groupIndex) => {
@@ -598,32 +619,38 @@ export default function MathExam() {
                                       </svg>
                                     </div>
                                     
-                                    <table className="w-full table-auto">
-                                      <thead>
-                                        <tr className="bg-gray-100">
-                                          <th className="p-3 text-left">Pregunta</th>
-                                          <th className="p-3 text-center">Respuesta</th>
-                                          <th className="p-3 text-center">Correcta</th>
-                                          <th className="p-3 text-center">¿Acertó?</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {groupDetails.map((detail, index) => (
-                                          <tr key={index} className="border-b last:border-b-0">
-                                            <td className="p-3">{detail.questionText.slice(0, 60)}...</td>
-                                            <td className="p-3 text-center">
-                                              {detail.userAnswer !== undefined ? String.fromCharCode(65 + detail.userAnswer) : '-'}
-                                            </td>
-                                            <td className="p-3 text-center">
-                                              {String.fromCharCode(65 + detail.correctAnswer)}
-                                            </td>
-                                            <td className="p-3 text-center font-bold" style={{ color: detail.isCorrect ? '#059669' : '#dc2626' }}>
-                                              {detail.isCorrect ? 'Sí' : 'No'}
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
+                                    <table className="w-full table-fixed border-collapse"> {/* table-fixed es clave para respetar los % */}
+  <thead>
+    <tr className="bg-gray-100">
+      <th className="p-3 text-left" style={{ width: '49%' }}>Pregunta</th>
+      <th className="p-3 text-center" style={{ width: '24%' }}>Respuesta</th>
+      <th className="p-3 text-center" style={{ width: '24%' }}>Correcta</th>
+    </tr>
+  </thead>
+  <tbody>
+    {groupDetails.map((detail, index) => (
+      <tr key={index} className="border-b last:border-b-0">
+        {/* Columna Pregunta: Texto completo y envuelto */}
+        <td className="p-3 text-left break-words whitespace-normal align-top">
+          {detail.questionText}
+        </td>
+        
+        {/* Columna Respuesta: Texto con color condicional */}
+        <td 
+          className="p-3 text-left font-bold align-top break-words" 
+          style={{ color: detail.isCorrect ? '#059669' : '#dc2626' }}
+        >
+          {detail.userAnswerText || (detail.userAnswer !== undefined ? String.fromCharCode(65 + detail.userAnswer) : '-')}
+        </td>
+        
+        {/* Columna Correcta: Texto del enunciado */}
+        <td className="p-3 text-left align-top break-words text-gray-700">
+          {detail.correctAnswerText || String.fromCharCode(65 + detail.correctAnswer)}
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
                                   </div>
                                 );
                               })}
@@ -646,7 +673,7 @@ export default function MathExam() {
                                       strokeWidth="4"
                                       strokeDasharray={`${parseFloat(r.pct)}, 100`}
                                     />
-                                    <text x="18" y="21" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#111827">
+                                    <text x="18" y="21" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#111827">
                                       {r.pct}%
                                     </text>
                                   </svg>
@@ -654,12 +681,34 @@ export default function MathExam() {
                               </div>
                               
                               {/* Redacción final */}
-                              <div className="mt-8 pt-6 border-t border-gray-200">
-                                <h4 className="text-xl font-semibold mb-4">Redacción Final</h4>
-                                <div className="p-6 bg-gray-50 rounded-lg whitespace-pre-line text-gray-800">
-                                  {r.redaccion || 'No se redactó respuesta.'}
-                                </div>
-                              </div>
+<div className="mt-8 pt-6 border-t border-gray-200">
+  <h4 className="text-xl font-semibold mb-4 text-indigo-900">Redacción Final</h4>
+  {(() => {
+    // Buscamos la consigna original usando el ID guardado
+    const consignaOriginal = redaccionBanco.find(b => b.id === r.redaccionId);
+    
+    return (
+      <div className="flex flex-col gap-4">
+        {consignaOriginal && (
+          <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 shadow-sm">
+            <p className="font-bold text-indigo-900 mb-1">
+              Caso: {consignaOriginal.titulo}
+            </p>
+            <p className="text-sm text-indigo-800 italic whitespace-pre-line"> <strong>Descripción: </strong>
+              {consignaOriginal.descripcion}
+            </p>
+            <p className="text-sm text-indigo-800 italic whitespace-pre-line"> <strong>Consigna: </strong>
+              {consignaOriginal.consigna}
+            </p>
+          </div>
+        )}
+        <div className="p-6 bg-white rounded-2xl border border-gray-200 whitespace-pre-line text-gray-800 shadow-sm">
+          {r.redaccion || 'No se redactó respuesta.'}
+        </div>
+      </div>
+    );
+  })()}
+</div>
                             </div>
                           </td>
                         </tr>
@@ -905,106 +954,108 @@ export default function MathExam() {
 
         <div className="max-w-4xl mx-auto">
           <div className="bg-card/95 backdrop-blur-xl rounded-3xl shadow-2xl p-10 border border-celeste/30">
-            <h2 className="text-4xl md:text-5xl font-bold text-primary mb-8 flex items-center gap-4">
-              Pregunta {currentQ + 1}
-            </h2>
-            
-            {violationMessage && (
-              <div className="mb-4 p-4 bg-red-100 border border-red-500 text-red-700 rounded-lg font-semibold animate-pulse-scale">
-                {violationMessage}
-              </div>
-            )}
-            
-            <div 
-              className="w-16 h-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full mb-8"
-              onTouchStart={(e) => e.preventDefault()}
-              onTouchEnd={(e) => e.preventDefault()}
-            />
-            
-            <p className="text-xl leading-relaxed text-gray-800 mb-10">
-              {q.question}
-            </p>
-            
-            <div className="space-y-4 mb-12">
-              {q.options.map((opt, i) => (
-                <button 
-                  key={i}
-                  onClick={() => setSelected(i)}
-                  className={`group relative w-full p-6 rounded-2xl border-3 font-medium text-left transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl ${
-                    selected === i
-                      ? 'border-indigo-500 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-indigo-200/50 scale-[1.02]'
-                      : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 shadow-md'
-                  }`}
-                >
-                  <div className="flex items-center">
-                    <div className={`w-8 h-8 rounded-2xl border-4 mr-5 flex items-center justify-center font-bold text-sm shadow-md transition-all group-hover:scale-110 ${
-                      selected === i
-                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-300/50'
-                        : 'bg-card border-gray-300 text-gray-600 shadow-sm'
-                    }`}>
-                      {String.fromCharCode(65 + i)}
-                    </div>
-                    <span className="text-lg leading-relaxed">{opt}</span>
-                  </div>
-                </button>
-              ))}
+          
+            {!showWriting ? (
+  /* FASE 1: Muestra solo la pregunta de opción múltiple */
+  <>
+    <h2 className="text-4xl md:text-5xl font-bold text-primary mb-8 flex items-center gap-4">
+      Pregunta {currentQ + 1}
+    </h2>
+    
+    <div className="w-16 h-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full mb-8" />
+    
+    <p className="text-xl leading-relaxed text-gray-800 mb-10">
+      {q.question}
+    </p>
+    
+    <div className="space-y-4 mb-12">
+      {q.options.map((opt, i) => (
+        <button 
+          key={i}
+          onClick={() => setSelected(i)}
+          className={`group relative w-full p-6 rounded-2xl border-3 font-medium text-left transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl ${
+            selected === i
+              ? 'border-indigo-500 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-indigo-200/50 scale-[1.02]'
+              : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 shadow-md'
+          }`}
+        >
+          <div className="flex items-center">
+            <div className={`w-8 h-8 rounded-2xl border-4 mr-5 flex items-center justify-center font-bold text-sm shadow-md transition-all group-hover:scale-110 ${
+              selected === i
+                ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-300/50'
+                : 'bg-card border-gray-300 text-gray-600 shadow-sm'
+            }`}>
+              {String.fromCharCode(65 + i)}
             </div>
-            
-            {currentQ === currentQuestions.length - 1 && (
-              <div className="mt-8">
-                <h3 className="text-2xl font-bold mb-4">Pregunta de Redacción Final</h3>
-                
-                {!redaccionSelected ? (
-                  <div className="mb-6">
-                    <p className="text-lg mb-4">
-                      Seleccione una de las siguientes consignas para desarrollar:
-                    </p>
-                    <select 
-                      value=""
-                      onChange={(e) => {
-                        const id = parseInt(e.target.value);
-                        setRedaccionSelected(id);
-                        const selected = redaccionBanco.find(q => q.id === id);
-                        if (selected) console.log(`Consigna seleccionada:\n\n${selected.consigna}`);
-                      }}
-                      className="w-full p-4 rounded-xl border-2 border-gray-300 focus:border-indigo-500 outline-none text-lg"
-                    >
-                      <option value="">--Seleccione una consigna--</option>
-                      {redaccionBanco.map(q => (
-                        <option key={q.id} value={q.id}>
-                          {q.titulo}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <div className="mb-6">
-                    <p className="text-xl font-semibold mb-4">
-                      {redaccionBanco.find(q => q.id === redaccionSelected)?.titulo}
-                    </p>
-                    <p className="text-lg mb-4 whitespace-pre-line">
-                      {redaccionBanco.find(q => q.id === redaccionSelected)?.consigna}
-                    </p>
-                    <textarea 
-                      value={redaccionText}
-                      onChange={(e) => setRedaccionText(e.target.value)}
-                      placeholder="Escribe tu respuesta aquí"//... (mínimo 200 palabras)"
+            <span className="text-lg leading-relaxed">{opt}</span>
+          </div>
+        </button>
+      ))}
+    </div>
+  </>
+) : (
+  /* FASE 2: Muestra solo la redacción final */
+  <div className="mt-8">
+    <h3 className="text-2xl font-bold mb-4">Pregunta de Redacción Final</h3>
+    {!redaccionSelected ? (
+      <div className="mb-6">
+        <p className="text-lg mb-4">Seleccione un caso para desarrollar:</p>
+        <select 
+          value=""
+          onChange={(e) => setRedaccionSelected(parseInt(e.target.value))}
+          className="w-full p-4 rounded-xl border-2 border-gray-300 focus:border-indigo-500 outline-none text-lg bg-white"
+        >
+          <option value="">--Seleccione un caso--</option>
+          {redaccionBanco.map(q => (
+            <option key={q.id} value={q.id}>{q.titulo}</option>
+          ))}
+        </select>
+      </div>
+    ) : (
+      <div className="mb-6">
+        <p className="text-xl font-semibold mb-4"> <strong>Caso: </strong>
+          {redaccionBanco.find(q => q.id === redaccionSelected)?.titulo}
+        </p>
+        <p className="text-lg mb-4 whitespace-pre-line text-gray-600"> <strong>Descripción: </strong> 
+          {redaccionBanco.find(q => q.id === redaccionSelected)?.descripcion}
+        </p>
+        <p className="text-lg mb-4 whitespace-pre-line text-gray-600"> <strong>Consigna: </strong>
+          {redaccionBanco.find(q => q.id === redaccionSelected)?.consigna}
+        </p>
+        <textarea 
+          value={redaccionText}
+          onChange={(e) => setRedaccionText(e.target.value)}
+          placeholder="Escribe tu respuesta aquí..."
                       className="w-full h-64 p-4 rounded-xl border-2 border-gray-300 focus:border-indigo-500 outline-none text-lg"
                     />
                   </div>
                 )}
               </div>
             )}
+
+{alertDiv && (
+      <div className="mb-4 p-4 bg-gray-100 border border-gray-500 text-gray-700 rounded-lg font-semibold animate-pulse-scale-small">
+        {alertDiv}
+      </div>
+    )}
+
+          {violationMessage && (
+      <div className="mb-4 p-4 bg-red-100 border border-red-500 text-red-700 rounded-lg font-semibold animate-pulse-scale">
+        {violationMessage}
+      </div>
+    )}
             
             <div className="flex justify-end pt-6 border-t-2 border-gray-100">
               <button 
                 onClick={() => {
-                  if (currentQ > 0) {
+                  if (showWriting) {
+                    setShowWriting(false); // Vuelve de redacción a la última pregunta
+                  } else if (currentQ > 0) {
                     setCurrentQ(prev => prev - 1);
                     setSelected(answers[currentQ - 1] ?? null);
                   }
                 }}
-                disabled={currentQ === 0 || proctorLocked}
+                disabled={(currentQ === 0 && !showWriting) || proctorLocked}
                 className={`px-12 py-5 rounded-2xl font-black text-lg shadow-2xl transition-all transform ${
                   currentQ === 0
                     ? 'bg-card-400 text-gray-500 cursor-not-allowed shadow-none'
@@ -1016,16 +1067,16 @@ export default function MathExam() {
               
               <button 
                 onClick={handleNext}
-                disabled={selected === null || savingAnswer}
+                disabled={(!showWriting && (selected === null || proctorViolations >= MAX_VIOLATIONS)) || (showWriting && !redaccionSelected) || savingAnswer}
                 className={`px-12 py-5 rounded-2xl font-black text-lg shadow-2xl transition-all transform ${
                   selected === null || savingAnswer
                     ? 'bg-gray-400 text-gray-500 cursor-not-allowed shadow-none'
                     : 'btn-primary hover:scale-[1.05] shadow-2xl'
                 } ${savingAnswer ? 'opacity-50 cursor-wait' : ''}`}
               >
-                {currentQ < currentQuestions.length - 1 
-                  ? `Siguiente (${currentQ + 2})` 
-                  : '🎯 Finalizar Examen'
+                {showWriting // {currentQ < currentQuestions.length - 1 ? `Siguiente (${currentQ + 2})` : '🎯 Finalizar Examen' } 
+                  ? '🎯 Finalizar Examen' 
+                  : (currentQ < currentQuestions.length - 1 ? 'Siguiente' : 'Ir a Redacción')
                 }
               </button>
             </div>
