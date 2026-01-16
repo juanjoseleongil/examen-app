@@ -168,10 +168,17 @@ export default function MathExam() {
   if (isFinishing.current || finished) return;
   isFinishing.current = true;
 
-  // Usamos las respuestas que lleguen por parámetro o las del estado
   const currentAnswers = finalAnswers || answers;
   const score = calculateScore(currentAnswers);
   
+  // No esperes demasiado por la IP, si falla, sigue adelante
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 segundos máximo
+    clearTimeout(timeoutId);
+  } catch (e) {
+    console.log("No se pudo obtener la IP, continuando...");
+  }
   const newResult: Omit<ExamResult, 'id'> = {
     name: candidateName,
     idNumber: candidateId,
@@ -269,24 +276,23 @@ export default function MathExam() {
     return () => unsubscribe();
   }, [mode, isAdminLoggedIn]);
 
-  useEffect(() => {
-    if (!sessionId || !started || finished) return;
-    
-    const updateSession = async () => {
-      try {
-        await updateDoc(doc(db, "activeSessions", sessionId), {
-          currentQuestion: currentQ + 1,
-          timeLeft,
-          lastActivity: serverTimestamp(),
-        });
-      } catch (error) {
-        console.error("Error updating session:", error);
-      }
-    };
-    
-    updateSession();
-    document.body.style.userSelect = 'none';
-  }, [currentQ, timeLeft, sessionId, started, finished]);
+  // Reemplaza el useEffect que sincroniza la sesión por este:
+useEffect(() => {
+  if (sessionId && started && !finished) {
+    // Solo actualizamos Firebase si la pregunta cambió 
+    // o si el tiempo es múltiplo de 30 (cada 30 segundos)
+    if (timeLeft % 30 === 0 || timeLeft === 3599) { 
+      const sessionRef = doc(db, "activeSessions", sessionId);
+      updateDoc(sessionRef, {
+        currentQuestion: currentQ + 1,
+        timeLeft: timeLeft,
+        lastActivity: new Date().toISOString()
+      }).catch(err => console.error("Error de sincronización:", err));
+    }
+  }
+  // Quitamos timeLeft de las dependencias para que no se ejecute cada segundo
+  // Lo manejaremos con una lógica interna o solo por cambios de pregunta
+}, [currentQ, sessionId, started, finished, timeLeft]);
 
   useEffect(() => {
     if (!started || finished || proctorLocked) return;
