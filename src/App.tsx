@@ -482,6 +482,20 @@ if (currentQ < currentQuestions.length - 1) {
   }
 
   if (mode === 'admin') {
+  
+  const forceCloseSession = async (id: string) => {
+  try {
+    const sessionRef = doc(db, "activeSessions", id);
+    await updateDoc(sessionRef, { 
+      status: 'completada',
+      lastActivity: new Date().toISOString()
+    });
+    // Opcional: Podrías disparar una alerta de éxito aquí
+  } catch (err) {
+    console.error("Error al cerrar sesión:", err);
+  }
+};
+  
     const asignaturasSinGrados = [
     "Servicios generales",
     "Conductor de transporte escolar",
@@ -520,6 +534,12 @@ if (currentQ < currentQuestions.length - 1) {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {activeSessions.map(session => (
                   <div key={session.id} className="bg-card rounded-2xl shadow-xl p-6 border-l-4 border-emerald-500">
+                  <button
+        onClick={() => forceCloseSession(session.id)}
+        className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-full text-xs"
+      >
+        Finalizar Forzoso
+      </button>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-2xl md:text-3xl font-semibold text-accent mb-4">
                         {session.name}
