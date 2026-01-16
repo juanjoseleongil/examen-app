@@ -965,7 +965,7 @@ export default function MathExam() {
                         const id = parseInt(e.target.value);
                         setRedaccionSelected(id);
                         const selected = redaccionBanco.find(q => q.id === id);
-                        //if (selected) alert(`Consigna seleccionada:\n\n${selected.consigna}`);
+                        if (selected) console.log(`Consigna seleccionada:\n\n${selected.consigna}`);
                       }}
                       className="w-full p-4 rounded-xl border-2 border-gray-300 focus:border-indigo-500 outline-none text-lg"
                     >
