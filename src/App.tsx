@@ -144,7 +144,7 @@ export default function MathExam() {
     
     details.push({
       question: q.id,
-      userAnswer: userAnswer ?? undefined,
+      userAnswer: userAnswer ?? null,
       correctAnswer: q.correct,
       isCorrect,
       questionText: q.question,
@@ -164,12 +164,14 @@ export default function MathExam() {
     };
   }, [currentQuestions]);
 
-  const finishExam = useCallback(async () => {
-  // Guardia: Si ya se está finalizando o ya terminó, salir.
+  const finishExam = useCallback(async (finalAnswers?: Record<number, number>) => {
   if (isFinishing.current || finished) return;
   isFinishing.current = true;
 
-  const score = calculateScore(answers);
+  // Usamos las respuestas que lleguen por parámetro o las del estado
+  const currentAnswers = finalAnswers || answers;
+  const score = calculateScore(currentAnswers);
+  
   const newResult: Omit<ExamResult, 'id'> = {
     name: candidateName,
     idNumber: candidateId,
@@ -192,7 +194,6 @@ export default function MathExam() {
   };
 
   try {
-    // Guardamos el resultado
     await addDoc(collection(db, "results"), newResult);
     
     // Si hay reincidencia, marcamos como baneado
@@ -210,8 +211,8 @@ export default function MathExam() {
     }
   } catch (error) {
     console.error("Error finalizando:", error);
-    alert("Error al guardar.");
-    isFinishing.current = false; // Permitir reintento si falló la red
+    setAlertDiv("Error de conexión al guardar. Por favor, intente de nuevo.");
+    isFinishing.current = false;
     return;
   }
 
@@ -339,6 +340,12 @@ export default function MathExam() {
     };
   }, [started, finished, proctorLocked, proctorWarningShown, justHandledViolation, finishExam]);
 
+const asignaturasSinRedaccion = [
+  "Servicios generales",
+  "Conductor de transporte escolar",
+  "Auxiliar contable"
+];
+
   const handleNext = async () => {
     setViolationMessage('');
     
@@ -347,21 +354,25 @@ export default function MathExam() {
       if (selected === null) return;
       
       setSavingAnswer(true);
-      setAnswers(prev => ({
-        ...prev,
-        [currentQ]: selected
-      }));
+    const updatedAnswers = { ...answers, [currentQ]: selected };
+    setAnswers(updatedAnswers);
+    
       await new Promise(resolve => setTimeout(resolve, 0));
       setSavingAnswer(false);
       
-      if (currentQ < currentQuestions.length - 1) {
-        setCurrentQ((prev) => prev + 1);
-        setSelected(null);
+if (currentQ < currentQuestions.length - 1) {
+      setCurrentQ((prev) => prev + 1);
+      setSelected(null);
+    } else {
+      // Verificamos si terminamos aquí o vamos a redacción
+      if (asignaturasSinRedaccion.includes(selectedAsignatura)) {
+        finishExam(updatedAnswers); // Pasamos las respuestas frescas
       } else {
         setShowWriting(true);
       }
-      return;
     }
+    return;
+  }
     
     // FASE 2: Validación de la redacción
     if (!redaccionSelected) {
@@ -468,6 +479,11 @@ export default function MathExam() {
   }
 
   if (mode === 'admin') {
+    const asignaturasSinGrados = [
+    "Servicios generales",
+    "Conductor de transporte escolar",
+    "Auxiliar contable"
+    ];
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-8">
         <div className="max-w-7xl mx-auto">
@@ -585,75 +601,86 @@ export default function MathExam() {
                         <tr>
                           <td colSpan={10} className="p-8 bg-slate-200/50 shadow-inner">
                             <div className="max-h-96 overflow-y-auto shadow-xl">
-                              <h3 className="text-2xl font-bold mb-6">Detalles por Grado</h3>
+                              <h3 className="text-2xl font-bold mb-6">Detalles del examen</h3>
                               
-                              {Array.from({ length: 9 }, (_, groupIndex) => {
-                                const groupStart = groupIndex * 5;
-                                const groupDetails = r.details.slice(groupStart, groupStart + 5);
-                                const groupCorrect = groupDetails.filter(d => d.isCorrect).length;
-                                const groupTotal = 5;
-                                const groupPct = (groupCorrect / groupTotal) * 100;
-                                
-                                return (
-                                  <div key={groupIndex} className="mb-10 pb-6 border-b border-gray-200 last:border-b-0">
-                                    <h4 className="text-xl font-semibold mb-4">Grado {groupIndex + 1}°</h4>
-                                    
-                                    <div className="flex items-center justify-center mb-6">
-                                      <svg viewBox="0 0 36 36" className="w-32 h-32">
-                                        <path 
-                                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                          fill="none"
-                                          stroke="#e5e7eb"
-                                          strokeWidth="3"
-                                        />
-                                        <path 
-                                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                          fill="none"
-                                          stroke="#10b981"
-                                          strokeWidth="3"
-                                          strokeDasharray={`${groupPct}, 100`}
-                                        />
-                                        <text x="18" y="20.5" textAnchor="middle" fontSize="10" fill="#374151">
-                                          {groupPct.toFixed(1)}%
-                                        </text>
-                                      </svg>
-                                    </div>
-                                    
-                                    <table className="w-full table-fixed border-collapse"> {/* table-fixed es clave para respetar los % */}
-  <thead>
-    <tr className="bg-gray-100">
-      <th className="p-3 text-left" style={{ width: '49%' }}>Pregunta</th>
-      <th className="p-3 text-center" style={{ width: '24%' }}>Respuesta</th>
-      <th className="p-3 text-center" style={{ width: '24%' }}>Correcta</th>
-    </tr>
-  </thead>
-  <tbody>
-    {groupDetails.map((detail, index) => (
-      <tr key={index} className="border-b last:border-b-0">
-        {/* Columna Pregunta: Texto completo y envuelto */}
-        <td className="p-3 text-left break-words whitespace-normal align-top">
-          {detail.questionText}
-        </td>
-        
-        {/* Columna Respuesta: Texto con color condicional */}
-        <td 
-          className="p-3 text-left font-bold align-top break-words" 
-          style={{ color: detail.isCorrect ? '#059669' : '#dc2626' }}
-        >
-          {detail.userAnswerText || (detail.userAnswer !== undefined ? String.fromCharCode(65 + detail.userAnswer) : '-')}
-        </td>
-        
-        {/* Columna Correcta: Texto del enunciado */}
-        <td className="p-3 text-left align-top break-words text-gray-700">
-          {detail.correctAnswerText || String.fromCharCode(65 + detail.correctAnswer)}
-        </td>
-      </tr>
-    ))}
-  </tbody>
-</table>
-                                  </div>
-                                );
-                              })}
+{asignaturasSinGrados.includes(r.asignatura) ? (
+    /* === VISTA CONTINUA PARA ASIGNATURAS ESPECIALES === */
+    <div className="mb-10 pb-6 border-b border-gray-200 last:border-b-0">
+      <table className="w-full table-fixed border-collapse mb-8">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="p-3 text-left" style={{ width: '49%' }}>Pregunta</th>
+            <th className="p-3 text-center" style={{ width: '24%' }}>Respuesta</th>
+            <th className="p-3 text-center" style={{ width: '24%' }}>Correcta</th>
+          </tr>
+        </thead>
+        <tbody>
+          {r.details.map((detail: any, index: number) => (
+            <tr key={index} className="border-b last:border-b-0">
+              <td className="p-3 text-left break-words whitespace-normal align-top">
+                {detail.questionText}
+              </td>
+              <td 
+                className="p-3 text-left font-bold align-top break-words" 
+                style={{ color: detail.isCorrect ? '#15803d' : '#b91c1c' }}
+              >
+                {detail.userAnswerText}
+              </td>
+              <td className="p-3 text-left align-top break-words text-gray-700">
+                {detail.correctAnswerText}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  ) : (
+    /* === VISTA POR GRADOS (1° a 9°) PARA ASIGNATURAS ESTÁNDAR === */
+Array.from({ length: 9 }, (_, groupIndex) => {
+      const groupStart = groupIndex * 5;
+      const groupDetails = r.details.slice(groupStart, groupStart + 5);
+      const groupCorrect = groupDetails.filter((d: any) => d.isCorrect).length;
+      const groupTotal = 5;
+      const groupPct = (groupCorrect / groupTotal) * 100;
+
+      return (
+        <div key={groupIndex} className="mb-10 pb-6 border-b border-gray-200 last:border-b-0">
+          <div className="flex items-center mb-4">
+            <h4 className="text-xl font-semibold text-indigo-900">Grado {groupIndex + 1}° </h4>
+            <span className="font-bold text-yellow-700">&emsp; Acierto: {groupPct.toFixed(1)}%</span>
+          </div>
+          
+          <table className="w-full table-fixed border-collapse mb-8">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="p-3 text-left" style={{ width: '49%' }}>Pregunta</th>
+                <th className="p-3 text-center" style={{ width: '24%' }}>Respuesta</th>
+                <th className="p-3 text-center" style={{ width: '24%' }}>Correcta</th>
+              </tr>
+            </thead>
+            <tbody>
+              {groupDetails.map((detail: any, index: number) => (
+                <tr key={index} className="border-b last:border-b-0">
+                  <td className="p-3 text-left break-words whitespace-normal align-top">
+                    {detail.questionText}
+                  </td>
+                  <td 
+                    className="p-3 text-left font-bold align-top break-words" 
+                    style={{ color: detail.isCorrect ? '#15803d' : '#b91c1c' }}
+                  >
+                    {detail.userAnswerText}
+                  </td>
+                  <td className="p-3 text-left align-top break-words text-gray-700">
+                    {detail.correctAnswerText}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    })
+  )}
                               
                               {/* Diagrama acumulado final */}
                               <div className="mt-8 pt-6 border-t border-gray-200">
@@ -680,35 +707,32 @@ export default function MathExam() {
                                 </div>
                               </div>
                               
-                              {/* Redacción final */}
-<div className="mt-8 pt-6 border-t border-gray-200">
-  <h4 className="text-xl font-semibold mb-4 text-indigo-900">Redacción Final</h4>
-  {(() => {
-    // Buscamos la consigna original usando el ID guardado
-    const consignaOriginal = redaccionBanco.find(b => b.id === r.redaccionId);
-    
-    return (
-      <div className="flex flex-col gap-4">
-        {consignaOriginal && (
-          <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 shadow-sm">
-            <p className="font-bold text-indigo-900 mb-1">
-              Caso: {consignaOriginal.titulo}
-            </p>
-            <p className="text-sm text-indigo-800 italic whitespace-pre-line"> <strong>Descripción: </strong>
-              {consignaOriginal.descripcion}
-            </p>
-            <p className="text-sm text-indigo-800 italic whitespace-pre-line"> <strong>Consigna: </strong>
-              {consignaOriginal.consigna}
-            </p>
+{/* Solo mostrar si la asignatura requiere redacción */}
+{!["Servicios generales", "Conductor de transporte escolar", "Auxiliar contable"].includes(r.asignatura) && (
+  <div className="mt-8 pt-6 border-t border-gray-200">
+    <h4 className="text-xl font-semibold mb-4 text-indigo-900">Redacción Final</h4>
+    {(() => {
+      const consignaOriginal = redaccionBanco.find(b => b.id === r.redaccionId);
+      return (
+        <div className="flex flex-col gap-4">
+          {consignaOriginal && (
+            <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 shadow-sm">
+              <p className="font-bold text-indigo-900 mb-1">
+                Consigna elegida: {consignaOriginal.titulo}
+              </p>
+              <p className="text-sm text-indigo-800 italic whitespace-pre-line">
+                {consignaOriginal.consigna}
+              </p>
+            </div>
+          )}
+          <div className="p-6 bg-white rounded-2xl border border-gray-200 whitespace-pre-line text-gray-800 shadow-sm">
+            {r.redaccion || 'No se redactó respuesta.'}
           </div>
-        )}
-        <div className="p-6 bg-white rounded-2xl border border-gray-200 whitespace-pre-line text-gray-800 shadow-sm">
-          {r.redaccion || 'No se redactó respuesta.'}
         </div>
-      </div>
-    );
-  })()}
-</div>
+      );
+    })()}
+  </div>
+)}
                             </div>
                           </td>
                         </tr>
@@ -753,7 +777,7 @@ export default function MathExam() {
           />
           
           <input 
-            type="text"
+            type="number"
             value={candidateId}
             onChange={(e) => {
               const value = e.target.value.replace(/\D/g, "");
@@ -1075,9 +1099,14 @@ export default function MathExam() {
                 } ${savingAnswer ? 'opacity-50 cursor-wait' : ''}`}
               >
                 {showWriting // {currentQ < currentQuestions.length - 1 ? `Siguiente (${currentQ + 2})` : '🎯 Finalizar Examen' } 
-                  ? '🎯 Finalizar Examen' 
-                  : (currentQ < currentQuestions.length - 1 ? 'Siguiente' : 'Ir a Redacción')
-                }
+? '🎯 Finalizar Examen' 
+    : (currentQ < currentQuestions.length - 1 
+        ? `Siguiente (${currentQ + 2})` 
+        : (asignaturasSinRedaccion.includes(selectedAsignatura) 
+            ? '🎯 Finalizar Examen' 
+            : 'Ir a Redacción')
+      )
+  }
               </button>
             </div>
           </div>

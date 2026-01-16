@@ -3,222 +3,211 @@
 @tailwind utilities;
 
 :root {
-  /* Colores institucionales principales */
-  --color-white: #ffffff;
-  --color-dark: #262626;
+  /* --- COLORES INSTITUCIONALES --- */
+  --color-blanco: #FFFFFF;
+  --color-oscuro: #262626;
   --color-celeste: #58b4c3;
   --color-amarillo: #fbcd22;
-  --color-dorado-fuerte: #c7960c;
-  --color-dorado-clarito: #eec412;
+  --color-dorado-fuerte: #c8960e;
+  --color-dorado-clarito: #efc300;
   --color-azul-escudo: #57c0d1;
-  --color-azul-luna-grande: #bddad9;
-  --color-azul-luna-pequena: #2faeb1;
+  --color-sol-grande: #eee53c;
+  --color-luna-grande: #c3e1df;
+  --color-sol-pequeno: #fac900;
+  --color-luna-pequena: #2eafb2;
 
-  /* Neutros útiles */
-  --color-gray-900: #111827;
-  --color-gray-800: #1f2937;
-  --color-gray-700: #374151;
-  --color-gray-600: #4b5563;
-  --color-gray-100: #f3f4f6;
-
-  /* Fuentes y tamaños adaptativos */
-  --font-base: calc(1rem + 0.5vw);
-  --font-large: calc(2rem + 1vw);
-  --font-medium: calc(1.25rem + 0.75vw);
-  --spacing-base: calc(1rem + 0.5vw);
-  --border-radius: calc(0.75rem + 0.25vw);
+  /* --- VARIABLES PROPORCIONALES --- */
+  --cFontSize: calc(1.5625 * (1vw + 1vh));
+  --cTableBorderSize: calc(0.09765625 * (1vw + 1vh));
 }
 
-/* Tamaños y espaciados adaptativos */
-.min-h-screen {
+/* --- BASES --- */
+* { 
+  font-family: sans-serif; 
+  box-sizing: border-box;
+}
+
+body { 
+  margin: 1.5625%; 
+  font-size: var(--cFontSize);
   min-height: 100vh;
+  line-height: 1.5;
 }
 
+/* --- TIPOGRAFÍA ADAPTATIVA --- */
+h1 { font-size: calc(2.00 * var(--cFontSize)); text-align: center; font-weight: 900; margin-bottom: 1.5rem; }
+h2 { font-size: calc(1.75 * var(--cFontSize)); text-align: center; font-weight: 800; margin-bottom: 1rem; }
+h3 { font-size: calc(1.50 * var(--cFontSize)); text-align: center; font-weight: 700; }
+h4 { font-size: calc(1.25 * var(--cFontSize)); font-weight: 600; }
+
+/* --- CONTENEDORES --- */
 .max-w-4xl {
   max-width: 90vw;
   margin-left: auto;
   margin-right: auto;
 }
 
-.p-6 {
-  padding: var(--spacing-base);
+.bg-card {
+  border-radius: calc(0.75rem + 0.25vw);
+  padding: calc(1.5rem + 1vw);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
 
-.text-3xl {
-  font-size: var(--font-large);
+/* --- FORMULARIOS E INPUTS --- */
+.form-input, select, textarea {
+  width: 100%;
+  padding: calc(0.8rem + 0.5vw) !important; 
+  margin-bottom: 2rem !important; 
+  border-radius: calc(0.390625 * (1vw + 1vh)) !important;
+  font-size: var(--cFontSize) !important;
+  outline: none;
+  border-width: var(--cTableBorderSize);
+  border-style: solid;
+  transition: all 0.2s ease;
 }
 
-.rounded-3xl {
-  border-radius: var(--border-radius);
+/* --- BOTONES DE OPCIÓN (EXAMEN) --- */
+/* Forzamos la alineación a la izquierda y el espaciado interno */
+.option-button {
+  width: 100%;
+  text-align: left !important; /* Alineación a la izquierda solicitada */
+  justify-content: flex-start !important; 
+  display: flex;
+  align-items: center;
+  padding: calc(0.8rem + 0.6vw) calc(1.2rem + 1vw) !important;
+  border-radius: calc(0.5rem + 0.2vw) !important;
+  font-size: var(--cFontSize) !important;
+  border-width: var(--cTableBorderSize);
+  border-style: solid;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 1rem;
 }
 
-/* Responsividad básica */
-@media (max-width: 768px) {
-  .max-w-4xl {
-    max-width: 95vw;
-  }
-
-  .grid-cols-2 {
-    grid-template-columns: 1fr;
-  }
-
-  .p-6 {
-    padding: calc(var(--spacing-base) * 0.8);
-  }
+/* Botón general (Siguiente/Anterior) */
+.btn-nav {
+  padding: calc(0.6rem + 0.5vw) calc(1.5rem + 1vw) !important;
+  font-weight: 800;
+  border-radius: calc(0.390625 * (1vw + 1vh)) !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
 }
 
-/* Bloqueo de selección */
-#examen-container,
-#examen-container * {
-  user-select: none !important;
-  -webkit-user-select: none !important; /* Safari / iOS */
-  -moz-user-select: none !important;    /* Firefox */
-  -ms-user-select: none !important;     /* Edge / IE */
-}
-
-#examen-container,
-#examen-container * {
-  -webkit-tap-highlight-color: transparent !important; /* Evita resalte en Android/Chrome */
-  -webkit-touch-callout: none !important; /* Bloquea menú flotante en iOS/Android */
-  touch-action: manipulation !important; /* Evita long press en algunos Android */
-}
-
-/* Pantalla inicial de datos del candidato */
-[data-screen="candidate-info"] {
-  background: linear-gradient(to bottom right, var(--color-celeste), var(--color-azul-escudo));
-}
-
-[data-screen="candidate-info"] .card {
-  background-color: rgba(255, 255, 255, 0.95);
-  border-color: var(--color-celeste);
-}
-
-/* Estilos compartidos para todos los inputs/select (base) */
-.form-input {
-  @apply w-full p-4 mb-8 rounded-xl border-2 outline-none text-lg;
-}
-
-/* Tema claro (default) */
-/*@media (prefers-color-scheme: dark) {*/
-  body {
-    background-color: var(--color-white);
-    color: var(--color-dark);
-  }
-
-  .bg-main {
-    background: linear-gradient(to bottom right, var(--color-celeste), var(--color-azul-escudo));
+/* --- TEMA CLARO --- */
+/*@media (prefers-color-scheme: light) {*/
+  body { 
+    background-color: var(--color-luna-grande); 
+    color: var(--color-oscuro); 
   }
 
   .bg-card {
-    background-color: rgba(255, 255, 255, 0.95);
-    border: 1px solid var(--color-celeste);
+    background-color: var(--color-blanco);
+    border: var(--cTableBorderSize) solid var(--color-luna-pequena);
   }
 
-  .text-primary {
-    color: var(--color-azul-escudo);
+  /* Opciones No Seleccionadas */
+  .option-unselected {
+    background-color: var(--color-blanco);
+    border-color: var(--color-luna-grande);
+    color: var(--color-oscuro);
+  }
+  .option-unselected:hover {
+    border-color: var(--color-celeste);
+    background-color: #f0f9fa;
   }
 
-  .text-accent {
-    color: var(--color-dorado-fuerte);
+  /* Opciones Seleccionadas */
+  .option-selected {
+    background-color: var(--color-celeste);
+    border-color: var(--color-dorado-fuerte);
+    color: var(--color-blanco);
+    box-shadow: 0 4px 12px rgba(88, 180, 195, 0.3);
   }
 
-  .btn-primary {
-    background: linear-gradient(to right, var(--color-celeste), var(--color-azul-escudo));
-    color: white;
+  .form-input, select {
+    background-color: var(--color-blanco);
+    border-color: var(--color-luna-pequena);
+    color: var(--color-oscuro);
   }
 
-  .btn-primary:hover {
-    background: linear-gradient(to right, var(--color-azul-luna-pequena), var(--color-azul-escudo));
-  }
-  
-  .form-input {
-    @apply bg-white text-gray-900 border-gray-300 placeholder-gray-500 focus:border-indigo-500;
+  .btn-nav {
+    background-color: var(--color-celeste);
+    color: var(--color-blanco);
   }
 /*}*/
 
-/* Tema oscuro, deshabilitado */
+/* --- TEMA OSCURO REFINADO --- */
 /*
-@media (prefers-color-scheme: light) {
-  body {
-    background-color: var(--color-dark);
-    color: var(--color-white);
-  }
-
-  .bg-main {
-    background: linear-gradient(to bottom right, var(--color-azul-luna-grande), var(--color-azul-luna-pequena));
+@media (prefers-color-scheme: dark) {
+  body { 
+    background-color: #1a1a1a;
+    color: var(--color-luna-grande); 
   }
 
   .bg-card {
-    background-color: rgba(38, 38, 38, 0.95);
-    border: 1px solid var(--color-celeste);
+    background-color: var(--color-oscuro);
+    border: var(--cTableBorderSize) solid var(--color-luna-pequena);
   }
 
-  .text-primary {
-    color: var(--color-celeste);
+  .option-unselected {
+    background-color: #2d2d2d;
+    border-color: #404040;
+    color: var(--color-luna-grande);
   }
-
-  .text-accent {
-    color: var(--color-dorado-clarito);
-  }
-
-  .btn-primary {
-    background: linear-gradient(to right, var(--color-celeste), var(--color-azul-luna-pequena));
-    color: white;
-  }
-
-  .btn-primary:hover {
-    background: linear-gradient(to right, var(--color-azul-escudo), var(--color-azul-luna-grande));
-  }
-  
-  [data-screen="candidate-info"] {
-    background: linear-gradient(to bottom right, var(--color-azul-luna-grande), var(--color-azul-luna-pequena));
-  }
-
-  [data-screen="candidate-info"] .card {
-    background-color: rgba(38, 38, 38, 0.95);
+  .option-unselected:hover {
     border-color: var(--color-celeste);
+    background-color: #363636;
   }
 
-  [data-screen="candidate-info"] input,
-  [data-screen="candidate-info"] button {
-    background-color: var(--color-gray-700);
-    color: white;
-    border-color: var(--color-gray-600);
+  .option-selected {
+    background-color: var(--color-luna-pequena);
+    border-color: var(--color-dorado-clarito);
+    color: var(--color-oscuro);
+    font-weight: 700;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
   }
 
-  [data-screen="candidate-info"] input::placeholder {
-    color: #9ca3af;
+  .form-input, select {
+    background-color: #2d2d2d;
+    border-color: #404040;
+    color: var(--color-blanco);
   }
-  
-  .form-input {
-    @apply bg-gray-700 text-white border-gray-600 placeholder-gray-400 focus:border-indigo-400;
+
+  .form-input:focus {
+    border-color: var(--color-dorado-clarito);
+  }
+
+  .btn-nav {
+    background-color: var(--color-luna-pequena);
+    color: var(--color-oscuro);
   }
 }
 */
 
-/* Animación de pulsación para mensaje de violación */
+/* --- TABLAS (ADMIN) --- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+td, th {
+  padding: 1.5625vw 1.5625vh;
+  border-bottom: var(--cTableBorderSize) solid rgba(128, 128, 128, 0.2);
+}
+
+/* --- UTILIDADES --- */
+#examen-container {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
 .animate-pulse-scale {
   animation: pulse-scale 1s infinite ease-in-out;
 }
 
 @keyframes pulse-scale {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.0625);
-  }
-}
-
-.animate-pulse-scale-small {
-  animation: pulse-scale-small 1s infinite ease-in-out;
-}
-
-@keyframes pulse-scale-small {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(0.9375);
-  }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
 }
