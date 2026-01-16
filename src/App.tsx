@@ -552,7 +552,7 @@ if (currentQ < currentQuestions.length - 1) {
           ) : results.length === 0 ? (
             <p className="text-center text-2xl text-gray-600">No hay resultados aún.</p>
           ) : (
-            <div className="bg-card rounded-3xl shadow-2xl overflow-hidden">
+            <div className="bg-card shadow-2xl">
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
                   <tr>
@@ -590,7 +590,7 @@ if (currentQ < currentQuestions.length - 1) {
                         <td className="p-6 text-center">
                           <button 
                             onClick={() => setExpandedResultId(expandedResultId === r.id ? null : r.id)}
-                            className="bg-indigo-600 text-white py-1 px-3 rounded-lg hover:bg-indigo-700"
+                            className="bg-indigo-600 text-white py-1 px-3 rounded-lg hover:bg-indigo-700 detailsBtn"
                           >
                             {expandedResultId === r.id ? 'Ocultar' : 'Ver Detalles'}
                           </button>
@@ -1084,7 +1084,7 @@ Array.from({ length: 9 }, (_, groupIndex) => {
                   currentQ === 0
                     ? 'bg-card-400 text-gray-500 cursor-not-allowed shadow-none'
                     : 'bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white shadow-gray-500/50 hover:shadow-gray-500/75 hover:scale-[1.05]'
-                }`}
+                } btn-nav`}
               >
                 ← Anterior
               </button>
@@ -1096,7 +1096,7 @@ Array.from({ length: 9 }, (_, groupIndex) => {
                   selected === null || savingAnswer
                     ? 'bg-gray-400 text-gray-500 cursor-not-allowed shadow-none'
                     : 'btn-primary hover:scale-[1.05] shadow-2xl'
-                } ${savingAnswer ? 'opacity-50 cursor-wait' : ''}`}
+                } ${savingAnswer ? 'opacity-50 cursor-wait' : ''} btn-nav`}
               >
                 {showWriting // {currentQ < currentQuestions.length - 1 ? `Siguiente (${currentQ + 2})` : '🎯 Finalizar Examen' } 
 ? '🎯 Finalizar Examen' 

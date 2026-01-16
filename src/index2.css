@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* --- COLORES INSTITUCIONALES --- */
+  --color-blanco: #FFFFFF;
+  --color-oscuro: #262626;
+  --color-celeste: #58b4c3;
+  --color-amarillo: #fbcd22;
+  --color-dorado-fuerte: #c8960e;
+  --color-dorado-clarito: #efc300;
+  --color-azul-escudo: #57c0d1;
+  --color-sol-grande: #eee53c;
+  --color-luna-grande: #c3e1df;
+  --color-sol-pequeno: #fac900;
+  --color-luna-pequena: #2eafb2;
+
+  /* --- VARIABLES PROPORCIONALES --- */
+  --cFontSize: calc(1.5625 * (1vw + 1vh));
+  --cTableBorderSize: calc(0.09765625 * (1vw + 1vh));
+}
+
+/* --- BASES --- */
+* { 
+  font-family: sans-serif; 
+  box-sizing: border-box;
+}
+
+body { 
+  margin: 1.5625%; 
+  font-size: var(--cFontSize);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* --- JERARQUÍA TIPOGRÁFICA --- */
+h1 { font-size: calc(2.00 * var(--cFontSize)); text-align: center; font-weight: 900; margin-bottom: 1.5rem; }
+h2 { font-size: calc(1.75 * var(--cFontSize)); text-align: center; font-weight: 800; margin-bottom: 1rem; }
+h3 { font-size: calc(1.50 * var(--cFontSize)); text-align: center; font-weight: 700; }
+
+p, span, div, input, select, textarea, button {
+  font-size: var(--cFontSize) !important;
+}
+
+/* --- CONTENEDORES --- */
+.max-w-4xl {
+  max-width: 90vw;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.bg-card {
+  border-radius: calc(0.75rem + 0.25vw);
+  padding: calc(1.125 * (1vw + 1vh));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* --- FORMULARIOS E INPUTS --- */
+.form-input, select, textarea {
+  width: 100%;
+  padding: calc(1.125 * (1vw + 1vh)) !important; 
+  margin-bottom: 2rem !important; 
+  border-radius: calc(0.390625 * (1vw + 1vh)) !important;
+  font-size: var(--cFontSize) !important;
+  outline: none;
+  border-width: var(--cTableBorderSize);
+  border-style: solid;
+  transition: all 0.2s ease;
+}
+
+/* --- BOTONES DE OPCIÓN (EXAMEN) --- */
+/* Forzamos la alineación a la izquierda y el espaciado interno */
+.option-button {
+  width: 100%;
+  text-align: left !important; /* Alineación a la izquierda solicitada */
+  justify-content: flex-start !important; 
+  display: flex;
+  align-items: center;
+  padding: calc(1.125 * (1vw + 1vh)) !important;
+  border-radius: calc(0.5rem + 0.2vw) !important;
+  font-size: var(--cFontSize) !important;
+  border-width: var(--cTableBorderSize);
+  border-style: solid;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 1rem;
+}
+
+/* Botón general (Siguiente/Anterior) */
+.btn-nav {
+  padding: calc(0.75 * (1vw + 1vh)) !important;
+  font-weight: 800;
+  border-radius: calc(0.390625 * (1vw + 1vh)) !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  margin: calc(1.125 * (1vw + 1vh));
+}
+
+  body { 
+    background-color: var(--color-luna-grande); 
+    color: var(--color-oscuro); 
+  }
+
+  .bg-card {
+    background-color: var(--color-blanco);
+    border: var(--cTableBorderSize) solid var(--color-luna-pequena);
+  }
+
+  /* Opciones No Seleccionadas */
+  .option-unselected {
+    background-color: var(--color-blanco);
+    border-color: var(--color-luna-grande);
+    color: var(--color-oscuro);
+  }
+  .option-unselected:hover {
+    border-color: var(--color-celeste);
+    background-color: #f0f9fa;
+  }
+
+  /* Opciones Seleccionadas */
+  .option-selected {
+    background-color: var(--color-celeste);
+    border-color: var(--color-dorado-fuerte);
+    color: var(--color-blanco);
+    box-shadow: 0 4px 12px rgba(88, 180, 195, 0.3);
+  }
+
+  .form-input, select {
+    background-color: var(--color-blanco);
+    border-color: var(--color-luna-pequena);
+    color: var(--color-oscuro);
+  }
+
+  .btn-nav {
+    background-color: var(--color-celeste);
+    color: var(--color-blanco);
+  }
+
+/* --- TABLA ADMIN (FIJADA AL 100%) --- */
+.admin-table-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: calc(0.5 * var(--cFontSize));
+  margin: calc(0.125 * (1vw + 1vh)) !important;
+  padding: calc(0.125 * (1vw + 1vh)) !important;
+}
+
+td, th {
+  padding: calc(0.25 * (1vw + 1vh)) !important;
+  word-break: break-word;
+}
+
+/* --- UTILIDADES --- */
+#examen-container {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.animate-pulse-scale {
+  animation: pulse-scale 1s infinite ease-in-out;
+}
+
+@keyframes pulse-scale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.detailsBtn
+{
+ font-size: calc(0.5 * var(--cFontSize)) !important;
+}
