@@ -99,7 +99,7 @@
 }
 
 /* Tema claro (default) */
-@media (prefers-color-scheme: dark) {
+/*@media (prefers-color-scheme: dark) {*/
   body {
     background-color: var(--color-white);
     color: var(--color-dark);
@@ -134,10 +134,11 @@
   .form-input {
     @apply bg-white text-gray-900 border-gray-300 placeholder-gray-500 focus:border-indigo-500;
   }
-}
+/*}*/
 
 /* Tema oscuro, deshabilitado */
-@media (prefers-color-scheme: dark) {
+/*
+@media (prefers-color-scheme: light) {
   body {
     background-color: var(--color-dark);
     color: var(--color-white);
@@ -193,6 +194,7 @@
     @apply bg-gray-700 text-white border-gray-600 placeholder-gray-400 focus:border-indigo-400;
   }
 }
+*/
 
 /* Animación de pulsación para mensaje de violación */
 .animate-pulse-scale {
