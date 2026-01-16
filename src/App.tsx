@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, CheckCircle, AlertCircle, User, Monitor, Play, Shield } from 'lucide-react';
+import { Clock, User, Monitor, Play, Shield } from 'lucide-react'; //CheckCircle, AlertCircle, 
 import { db, auth } from './firebase';
 import {
   collection,
