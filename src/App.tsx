@@ -177,10 +177,7 @@ export default function MathExam() {
     idNumber: candidateId,
     date: new Date().toISOString(),
     timeUsed: formatTime(3600 - timeLeft),
-    ip: await fetch('https://api.ipify.org?format=json')
-      .then(res => res.json())
-      .then(data => data.ip)
-      .catch(() => 'IP no disponible'),
+    ip: "ip test",
     userAgent: navigator.userAgent,
     correct: score.correct,
     total: score.total,
