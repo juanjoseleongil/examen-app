@@ -313,16 +313,17 @@ export default function MathExam() {
         (e) => e.preventDefault() } onContextMenu = {
         (e) => e.preventDefault() } onMouseDown = {
         (e) => {
-          // Opcional: evita selección con mouse en desktop
-          if (e.button === 0) e.preventDefault();
-        }
-      } > < div className = "max-w-4xl w-full bg-card rounded-3xl shadow-2xl p-16 text-center border-8 border-indigo-200" > < h1 className = "text-5xl md:text-6xl lg:text-7xl font-black text-primary mb-6 tracking-tight" > Prueba de conocimientos específicos < /h1> < div className = "grid grid-cols-1 md:grid-cols-2 gap-8" > < button onClick = {
-        () => setMode('exam') } className = "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black py-8 px-6 md:px-16 rounded-3xl shadow-2xl text-2xl md:text-3xl transition-all hover:shadow-3xl hover:scale-105 flex flex-col items-center justify-center min-h-[180px] whitespace-normal break-words text-center" > < Play className = "w-12 h-12 mb-4" / > PROFE < /button> < button onClick = {
-        () => setMode('admin-login') } className = "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-black py-8 px-6 md:px-16 rounded-3xl shadow-2xl text-2xl md:text-3xl transition-all hover:shadow-3xl hover:scale-105 flex flex-col items-center justify-center min-h-[180px] whitespace-normal break-words text-center" > < Shield className = "w-12 h-12 mb-4" / > ADMINISTRADOR < /button> < /div> < /div> < /div>);
+              // Opcional: evita selección con mouse en desktop
+    if (e.button === 0) e.preventDefault();
+  }}
+      >
+        <div className="max-w-4xl w-full bg-card rounded-3xl shadow-2xl p-16 text-center border-8 border-indigo-200"> < h1 className = "text-5xl md:text-6xl lg:text-7xl font-black text-primary mb-6 tracking-tight" > Prueba de conocimientos específicos </h1> < div className = "grid grid-cols-1 md:grid-cols-2 gap-8" > < button onClick = {
+        () => setMode('exam') } className = "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black py-8 px-6 md:px-16 rounded-3xl shadow-2xl text-2xl md:text-3xl transition-all hover:shadow-3xl hover:scale-105 flex flex-col items-center justify-center min-h-[180px] whitespace-normal break-words text-center" > < Play className = "w-12 h-12 mb-4" / > PROFE </button> < button onClick = {
+        () => setMode('admin-login') } className = "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-black py-8 px-6 md:px-16 rounded-3xl shadow-2xl text-2xl md:text-3xl transition-all hover:shadow-3xl hover:scale-105 flex flex-col items-center justify-center min-h-[180px] whitespace-normal break-words text-center" > < Shield className = "w-12 h-12 mb-4" / > ADMINISTRADOR </button> </div> </div> </div>);
   }
   if (mode === 'admin-login') {
     return ( < div data-screen = "candidate-info"
-      className = "min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" > < div className = "bg-card rounded-3xl shadow-2xl p-12 border-8 border-purple-200 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" > < h1 className = "text-5xl md:text-6xl font-black text-gray-900 dark:text-white break-words" > { /* ← Agrega break-words */ } Panel Administrador < /h1> < input type = "email"
+      className = "min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" > < div className = "bg-card rounded-3xl shadow-2xl p-12 border-8 border-purple-200 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" > < h1 className = "text-5xl md:text-6xl font-black text-gray-900 dark:text-white break-words" > { /* ← Agrega break-words */ } Panel Administrador </h1> < input type = "email"
       value = { adminEmail } onChange = {
         (e) => setAdminEmail(e.target.value) } placeholder = "Email administrador"
       pattern = "[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
@@ -341,36 +342,36 @@ export default function MathExam() {
           }
         }
       }
-      className = "w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-black py-4 rounded-xl shadow-2xl text-xl transition-all hover:shadow-3xl hover:scale-105" > Iniciar Sesión < /button> < /div> < /div>);
+      className = "w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-black py-4 rounded-xl shadow-2xl text-xl transition-all hover:shadow-3xl hover:scale-105" > Iniciar Sesión </button> </div> </div>);
   }
   if (mode === 'admin') {
-    return ( < div className = "min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-8" > < div className = "max-w-7xl mx-auto" > < div className = "flex justify-between items-center mb-8" > < h1 className = "text-5xl md:text-6xl lg:text-7xl font-black text-primary mb-6 tracking-tight" > Panel Administrador < /h1> < button onClick = {
+    return ( < div className = "min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-8" > < div className = "max-w-7xl mx-auto" > < div className = "flex justify-between items-center mb-8" > < h1 className = "text-5xl md:text-6xl lg:text-7xl font-black text-primary mb-6 tracking-tight" > Panel Administrador </h1> < button onClick = {
         async () => {
           await signOut(auth);
           setIsAdminLoggedIn(false);
           setMode('select');
         }
       }
-      className = "bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg" > Cerrar Sesión < /button> < /div> { /* PROFESORES EN VIVO */ } < div className = "mb-12" > < h2 className = "text-4xl md:text-5xl font-bold text-primary mb-8 flex items-center gap-4" > < Monitor className = "w-10 h-10 mr-4 text-emerald-600" / > Profesores en vivo({ activeSessions.length }) < /h2> {
-        activeSessions.length === 0 ? ( < p className = "text-xl text-gray-600" > No hay profesores activos en este momento. < /p>) : ( < div className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" > {
-          activeSessions.map(session => ( < div key = { session.id } className = "bg-card rounded-2xl shadow-xl p-6 border-l-4 border-emerald-500" > < div className = "flex items-center justify-between mb-4" > < h3 className = "text-2xl md:text-3xl font-semibold text-accent mb-4" > { session.name } < /h3> < span className = "bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-sm font-bold animate-pulse" > ACTIVO < /span> < /div> < p className = "text-gray-600 mb-2" > Cédula: { session.idNumber } < /p> < p className = "text-lg font-semibold mb-2" > Pregunta: < span className = "text-indigo-600" > { session.currentQuestion }
-            /{currentQuestions.length}</span > < /p> < p className = "text-lg font-semibold mb-2" > Tiempo restante: < span className = "text-red-600" > { formatTime(session.timeLeft) } < /span> < /p> < p className = "text-sm text-gray-500" > Última actividad: { session.lastActivity?.toDate?.().toLocaleTimeString() || 'Ahora' } < /p> < /div>))
-        } < /div>)
-      } < /div> { /* RESULTADOS FINALIZADOS */ } < h2 className = "text-4xl md:text-5xl font-bold text-primary mb-8 flex items-center gap-4" > Resultados finalizados < /h2> {
-        loadingResults ? ( < p className = "text-center text-2xl" > Cargando resultados... < /p>) : results.length === 0 ? ( < p className = "text-center text-2xl text-gray-600" > No hay resultados aún. < /p>) : ( < div className = "bg-card rounded-3xl shadow-2xl overflow-hidden" > < table className = "w-full" > < thead className = "bg-gradient-to-r from-purple-600 to-pink-600 text-white" > < tr > < th className = "p-6 text-left" > Nombre < /th> < th className = "p-6 text-left" > Cédula < /th> < th className = "p-6 text-left" > Asignatura < /th> < th className = "p-6 text-left" > Fecha < /th> < th className = "p-6 text-center" > Correctas < /th> < th className = "p-6 text-center" > Porcentaje < /th> < th className = "p-6 text-center" > Estado < /th> < th className = "p-6 text-center" > Tiempo < /th> < th className = "p-6 text-center" > Violaciones < /th> < th className = "p-6 text-center" > Detalles < /th> < /tr> < /thead> < tbody > {
-          results.map((r) => ( < > < tr key = { r.id } className = "border-b hover:bg-card-50" > < td className = "p-6" > { r.name } < /td> < td className = "p-6" > { r.idNumber } < /td> < td className = "p-6" > { r.asignatura } < /td> < td className = "p-6" > { new Date(r.date).toLocaleString('es-CO') } < /td> < td className = "p-6 text-center" > { r.correct }
+      className = "bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg" > Cerrar Sesión </button> </div> { /* PROFESORES EN VIVO */ } < div className = "mb-12" > < h2 className = "text-4xl md:text-5xl font-bold text-primary mb-8 flex items-center gap-4" > < Monitor className = "w-10 h-10 mr-4 text-emerald-600" / > Profesores en vivo({ activeSessions.length }) </h2> {
+        activeSessions.length === 0 ? ( < p className = "text-xl text-gray-600" > No hay profesores activos en este momento. </p>) : ( < div className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" > {
+          activeSessions.map(session => ( < div key = { session.id } className = "bg-card rounded-2xl shadow-xl p-6 border-l-4 border-emerald-500" > < div className = "flex items-center justify-between mb-4" > < h3 className = "text-2xl md:text-3xl font-semibold text-accent mb-4" > { session.name } </h3> < span className = "bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-sm font-bold animate-pulse" > ACTIVO </span> </div> < p className = "text-gray-600 mb-2" > Cédula: { session.idNumber } </p> < p className = "text-lg font-semibold mb-2" > Pregunta: < span className = "text-indigo-600" > { session.currentQuestion }
+            /{currentQuestions.length}</span > </p> < p className = "text-lg font-semibold mb-2" > Tiempo restante: < span className = "text-red-600" > { formatTime(session.timeLeft) } </span> </p> < p className = "text-sm text-gray-500" > Última actividad: { session.lastActivity?.toDate?.().toLocaleTimeString() || 'Ahora' } </p> </div>))
+        } </div>)
+      } </div> { /* RESULTADOS FINALIZADOS */ } < h2 className = "text-4xl md:text-5xl font-bold text-primary mb-8 flex items-center gap-4" > Resultados finalizados </h2> {
+        loadingResults ? ( < p className = "text-center text-2xl" > Cargando resultados... </p>) : results.length === 0 ? ( < p className = "text-center text-2xl text-gray-600" > No hay resultados aún. </p>) : ( < div className = "bg-card rounded-3xl shadow-2xl overflow-hidden" > < table className = "w-full" > < thead className = "bg-gradient-to-r from-purple-600 to-pink-600 text-white" > < tr > < th className = "p-6 text-left" > Nombre </th> < th className = "p-6 text-left" > Cédula </th> < th className = "p-6 text-left" > Asignatura </th> < th className = "p-6 text-left" > Fecha </th> < th className = "p-6 text-center" > Correctas </th> < th className = "p-6 text-center" > Porcentaje </th> < th className = "p-6 text-center" > Estado </th> < th className = "p-6 text-center" > Tiempo </th> < th className = "p-6 text-center" > Violaciones </th> < th className = "p-6 text-center" > Detalles </th> </tr> </thead> < tbody > {
+          results.map((r) => ( < > < tr key = { r.id } className = "border-b hover:bg-card-50" > < td className = "p-6" > { r.name } </td> < td className = "p-6" > { r.idNumber } </td> < td className = "p-6" > { r.asignatura } </td> < td className = "p-6" > { new Date(r.date).toLocaleString('es-CO') } </td> < td className = "p-6 text-center" > { r.correct }
             /{r.total}</td > < td className = "p-6 text-center font-bold"
-            style = { { color: r.passed ? '#059669' : '#dc2626' } } > { r.pct } % < /td> < td className = "p-6 text-center font-bold" > { r.passed ? 'APROBADO' : 'NO APROBADO' } < /td> < td className = "p-6 text-center" > { r.timeUsed } < /td> < td className = "p-6 text-center font-bold"
-            style = { { color: r.violations > 0 ? '#dc2626' : '#059669' } } > { r.violations || 0 } < /td> < td className = "p-6 text-center" > < button onClick = {
-              () => setExpandedResultId(expandedResultId === r.id ? null : r.id) } className = "bg-indigo-600 text-white py-1 px-3 rounded-lg hover:bg-indigo-700" > { expandedResultId === r.id ? 'Ocultar' : 'Ver Detalles' } < /button> < /td> < /tr> {
-              expandedResultId === r.id && ( < tr > < td colSpan = { 10 } className = "p-6 bg-card-50" > < div className = "max-h-96 overflow-y-auto" > < h3 className = "text-2xl font-bold mb-6" > Detalles por Grado < /h3> { /* Subgrupos por grado */ } {
+            style = { { color: r.passed ? '#059669' : '#dc2626' } } > { r.pct } % </td> < td className = "p-6 text-center font-bold" > { r.passed ? 'APROBADO' : 'NO APROBADO' } </td> < td className = "p-6 text-center" > { r.timeUsed } </td> < td className = "p-6 text-center font-bold"
+            style = { { color: r.violations > 0 ? '#dc2626' : '#059669' } } > { r.violations || 0 } </td> < td className = "p-6 text-center" > < button onClick = {
+              () => setExpandedResultId(expandedResultId === r.id ? null : r.id) } className = "bg-indigo-600 text-white py-1 px-3 rounded-lg hover:bg-indigo-700" > { expandedResultId === r.id ? 'Ocultar' : 'Ver Detalles' } </button> </td> </tr> {
+              expandedResultId === r.id && ( < tr > < td colSpan = { 10 } className = "p-6 bg-card-50" > < div className = "max-h-96 overflow-y-auto" > < h3 className = "text-2xl font-bold mb-6" > Detalles por Grado </h3> { /* Subgrupos por grado */ } {
                   Array.from({ length: 9 }, (_, groupIndex) => {
                     const groupStart = groupIndex * 5;
                     const groupDetails = r.details.slice(groupStart, groupStart + 5);
                     const groupCorrect = groupDetails.filter(d => d.isCorrect).length;
                     const groupTotal = 5;
                     const groupPct = (groupCorrect / groupTotal) * 100;
-                    return ( < div key = { groupIndex } className = "mb-10 pb-6 border-b border-gray-200 last:border-b-0" > < h4 className = "text-xl font-semibold mb-4" > Grado { groupIndex + 1 }° < /h4> < div className = "flex items-center justify-center mb-6" > < svg viewBox = "0 0 36 36"
+                    return ( < div key = { groupIndex } className = "mb-10 pb-6 border-b border-gray-200 last:border-b-0" > < h4 className = "text-xl font-semibold mb-4" > Grado { groupIndex + 1 }° </h4> < div className = "flex items-center justify-center mb-6" > < svg viewBox = "0 0 36 36"
                       className = "w-32 h-32" > < path d = "M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                       fill = "none"
                       stroke = "#e5e7eb"
@@ -383,12 +384,12 @@ export default function MathExam() {
                       y = "20.5"
                       textAnchor = "middle"
                       fontSize = "10"
-                      fill = "#374151" > { groupPct.toFixed(1) } % < /text> < /svg> < /div> < table className = "w-full table-auto" > < thead > < tr className = "bg-gray-100" > < th className = "p-3 text-left" > Pregunta < /th> < th className = "p-3 text-center" > Respuesta < /th> < th className = "p-3 text-center" > Correcta < /th> < th className = "p-3 text-center" > ¿Acertó ? < /th> < /tr> < /thead> < tbody > {
-                        groupDetails.map((detail, index) => ( < tr key = { index } className = "border-b last:border-b-0" > < td className = "p-3" > { detail.questionText.slice(0, 60) }... < /td> < td className = "p-3 text-center" > { detail.userAnswer !== undefined ? String.fromCharCode(65 + detail.userAnswer) : '-' } < /td> < td className = "p-3 text-center" > { String.fromCharCode(65 + detail.correctAnswer) } < /td> < td className = "p-3 text-center font-bold"
-                          style = { { color: detail.isCorrect ? '#059669' : '#dc2626' } } > { detail.isCorrect ? 'Sí' : 'No' } < /td> < /tr>))
-                      } < /tbody> < /table> < /div>);
+                      fill = "#374151" > { groupPct.toFixed(1) } % </text> </svg> </div> < table className = "w-full table-auto" > < thead > < tr className = "bg-gray-100" > < th className = "p-3 text-left" > Pregunta </th> < th className = "p-3 text-center" > Respuesta </th> < th className = "p-3 text-center" > Correcta </th> < th className = "p-3 text-center" > ¿Acertó ? </th> </tr> </thead> < tbody > {
+                        groupDetails.map((detail, index) => ( < tr key = { index } className = "border-b last:border-b-0" > < td className = "p-3" > { detail.questionText.slice(0, 60) }... </td> < td className = "p-3 text-center" > { detail.userAnswer !== undefined ? String.fromCharCode(65 + detail.userAnswer) : '-' } </td> < td className = "p-3 text-center" > { String.fromCharCode(65 + detail.correctAnswer) } </td> < td className = "p-3 text-center font-bold"
+                          style = { { color: detail.isCorrect ? '#059669' : '#dc2626' } } > { detail.isCorrect ? 'Sí' : 'No' } </td> </tr>))
+                      } </tbody> </table> </div>);
                   })
-                } { /* Diagrama acumulado final */ } < div className = "mt-8 pt-6 border-t border-gray-200" > < h4 className = "text-xl font-semibold mb-4 text-center" > Resultado Acumulado < /h4> < div className = "flex items-center justify-center" > < svg viewBox = "0 0 36 36"
+                } { /* Diagrama acumulado final */ } < div className = "mt-8 pt-6 border-t border-gray-200" > < h4 className = "text-xl font-semibold mb-4 text-center" > Resultado Acumulado </h4> < div className = "flex items-center justify-center" > < svg viewBox = "0 0 36 36"
                 className = "w-40 h-40" > < path d = "M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                 fill = "none"
                 stroke = "#e5e7eb"
@@ -402,10 +403,10 @@ export default function MathExam() {
                 textAnchor = "middle"
                 fontSize = "12"
                 fontWeight = "bold"
-                fill = "#111827" > { r.pct } % < /text> < /svg> < /div> < /div> { /* Redacción final */ } < div className = "mt-8 pt-6 border-t border-gray-200" > < h4 className = "text-xl font-semibold mb-4" > Redacción Final < /h4> < div className = "p-6 bg-gray-50 rounded-lg whitespace-pre-line text-gray-800" > { r.redaccion || 'No se redactó respuesta.' } < /div> < /div> < /div> < /td> < /tr>)
-            } < />))
-        } < /tbody> < /table> < /div>)
-      } < /div> < /div>);
+                fill = "#111827" > { r.pct } % </text> </svg> </div> </div> { /* Redacción final */ } < div className = "mt-8 pt-6 border-t border-gray-200" > < h4 className = "text-xl font-semibold mb-4" > Redacción Final </h4> < div className = "p-6 bg-gray-50 rounded-lg whitespace-pre-line text-gray-800" > { r.redaccion || 'No se redactó respuesta.' } </div> </div> </div> </td> </tr>)
+            } </>))
+        } </tbody> </table> </div>)
+      } </div> </div>);
   }
   // ====== EXAMEN (PROFESOR) ======
   if (!started) {
@@ -414,7 +415,7 @@ export default function MathExam() {
       id = "exc2"
       onCopy = {
         (e) => e.preventDefault() } onContextMenu = {
-        (e) => e.preventDefault() } > < div className = "max-w-2xl w-full bg-card rounded-3xl shadow-2xl p-12 text-center border-8 border-indigo-200" > < h1 className = "text-5xl md:text-6xl lg:text-7xl font-black text-primary mb-6 tracking-tight" > Datos del Profesor < /h1> < input type = "text"
+        (e) => e.preventDefault() } > < div className = "max-w-2xl w-full bg-card rounded-3xl shadow-2xl p-12 text-center border-8 border-indigo-200" > < h1 className = "text-5xl md:text-6xl lg:text-7xl font-black text-primary mb-6 tracking-tight" > Datos del Profesor </h1> < input type = "text"
       value = { candidateName } onChange = {
         (e) => {
           const value = e.target.value.normalize("NFD") // descompone acentos
@@ -446,7 +447,7 @@ export default function MathExam() {
       }
       placeholder = "Número de cédula"
       className = "form-input" / > < select value = { selectedAsignatura } onChange = {
-        (e) => setSelectedAsignatura(e.target.value) } className = "form-input" > < option value = "" > Seleccione la asignatura < /option> < option value = "Ciencias Naturales" > Ciencias Naturales < /option> < option value = "Ciencias Sociales" > Ciencias Sociales < /option> < option value = "Artística" > Artística < /option> < option value = "Ética y Religión" > Ética y Religión < /option> < option value = "Educación Física" > Educación Física < /option> < option value = "Lengua Castellana" > Lengua Castellana < /option> < option value = "Lengua Extranjera" > Lengua Extranjera < /option> < option value = "Matemática" > Matemática < /option> < option value = "Tecnología" > Tecnología < /option> < option value = "Servicios generales" > Servicios generales < /option> < option value = "Conductor de transporte escolar" > Conductor de transporte escolar < /option> < option value = "Auxiliar contable" > Auxiliar contable < /option> < /select> < button onClick = {
+        (e) => setSelectedAsignatura(e.target.value) } className = "form-input" > < option value = "" > Seleccione la asignatura </option> < option value = "Ciencias Naturales" > Ciencias Naturales </option> < option value = "Ciencias Sociales" > Ciencias Sociales </option> < option value = "Artística" > Artística </option> < option value = "Ética y Religión" > Ética y Religión </option> < option value = "Educación Física" > Educación Física </option> < option value = "Lengua Castellana" > Lengua Castellana </option> < option value = "Lengua Extranjera" > Lengua Extranjera </option> < option value = "Matemática" > Matemática </option> < option value = "Tecnología" > Tecnología </option> < option value = "Servicios generales" > Servicios generales </option> < option value = "Conductor de transporte escolar" > Conductor de transporte escolar </option> < option value = "Auxiliar contable" > Auxiliar contable </option> </select> < button onClick = {
         async () => {
           const bannedQuery = query(collection(db, "bannedCandidates"), where("idNumber", "==", candidateId.trim().toLowerCase()));
           const bannedSnapshot = await getDocs(bannedQuery);
@@ -531,8 +532,8 @@ export default function MathExam() {
       ? 'bg-gray-400 text-gray-500 cursor-not-allowed shadow-none'
       : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white cursor-pointer'
   } ${startingExam ? 'scale-95 opacity-75 cursor-wait' : ''}` } > {
-        startingExam ? ('Iniciando...') : ( < > < Play className = "w-10 h-10 mr-4 inline" / > INICIAR EXAMEN < />)
-      } < /button> < /div> < /div>);
+        startingExam ? ('Iniciando...') : ( < > < Play className = "w-10 h-10 mr-4 inline" / > INICIAR EXAMEN </>)
+      } </button> </div> </div>);
   }
   if (started && !finished) {
     const q = currentQuestions[currentQ];
@@ -546,19 +547,19 @@ export default function MathExam() {
           // Opcional: evita selección con mouse en desktop
           if (e.button === 0) e.preventDefault();
         }
-      } > < div className = "max-w-4xl mx-auto mb-8" > < div className = "bg-card backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-celeste/30" > < div className = "flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4" > < div className = "flex items-center gap-4" > < div className = "flex items-center bg-red-100 p-3 rounded-xl border-2 border-red-200 shadow-md" > < Clock className = "w-6 h-6 text-red-600 mr-2" / > < span className = "text-2xl font-mono font-bold text-red-700 tracking-wide" > { formatTime(timeLeft) } < /span> < /div> < div className = "bg-gradient-to-r from-indigo-100 to-purple-100 px-4 py-2 rounded-xl font-mono font-semibold text-indigo-900 shadow-inner" > Pregunta { currentQ + 1 } de { currentQuestions.length } < /div> < /div> < div className = "flex items-center gap-4 text-sm font-semibold text-gray-800 bg-card/60 px-4 py-2 rounded-xl shadow-sm" > < User size = { 18 }
-      /> { candidateName } < span className = "ml-2 text-indigo-700 font-mono" > # { candidateId } < /span> {
+      } > < div className = "max-w-4xl mx-auto mb-8" > < div className = "bg-card backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-celeste/30" > < div className = "flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4" > < div className = "flex items-center gap-4" > < div className = "flex items-center bg-red-100 p-3 rounded-xl border-2 border-red-200 shadow-md" > < Clock className = "w-6 h-6 text-red-600 mr-2" / > < span className = "text-2xl font-mono font-bold text-red-700 tracking-wide" > { formatTime(timeLeft) } </span> </div> < div className = "bg-gradient-to-r from-indigo-100 to-purple-100 px-4 py-2 rounded-xl font-mono font-semibold text-indigo-900 shadow-inner" > Pregunta { currentQ + 1 } de { currentQuestions.length } </div> </div> < div className = "flex items-center gap-4 text-sm font-semibold text-gray-800 bg-card/60 px-4 py-2 rounded-xl shadow-sm" > < User size = { 18 }
+      /> { candidateName } < span className = "ml-2 text-indigo-700 font-mono" > # { candidateId } </span> {
         proctoringActive && ( < div className = "flex items-center gap-1 bg-emerald-200 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold animate-pulse" > < Monitor size = { 14 }
           />
-          Proctoring ON < /div>)
-      } < /div> < /div> < div className = "w-full bg-card-200 rounded-full h-3 shadow-inner" > < div className = "bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full shadow-lg transition-all duration-1000"
+          Proctoring ON </div>)
+      } </div> </div> < div className = "w-full bg-card-200 rounded-full h-3 shadow-inner" > < div className = "bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full shadow-lg transition-all duration-1000"
       style = { { width: `${prog}%` } }
-      /> < /div> < /div> < /div> < div className = "max-w-4xl mx-auto" > < div className = "bg-card/95 backdrop-blur-xl rounded-3xl shadow-2xl p-10 border border-celeste/30" > < h2 className = "text-4xl md:text-5xl font-bold text-primary mb-8 flex items-center gap-4" > Pregunta { currentQ + 1 } < /h2> {
-        violationMessage && ( < div className = "mb-4 p-4 bg-red-100 border border-red-500 text-red-700 rounded-lg font-semibold animate-pulse-scale" > { violationMessage } < /div>)
+      /> </div> </div> </div> < div className = "max-w-4xl mx-auto" > < div className = "bg-card/95 backdrop-blur-xl rounded-3xl shadow-2xl p-10 border border-celeste/30" > < h2 className = "text-4xl md:text-5xl font-bold text-primary mb-8 flex items-center gap-4" > Pregunta { currentQ + 1 } </h2> {
+        violationMessage && ( < div className = "mb-4 p-4 bg-red-100 border border-red-500 text-red-700 rounded-lg font-semibold animate-pulse-scale" > { violationMessage } </div>)
       } < div className = "w-16 h-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full mb-8"
       onTouchStart = {
         (e) => e.preventDefault() } onTouchEnd = {
-        (e) => e.preventDefault() } > < /div> < p className = "text-xl leading-relaxed text-gray-800 mb-10" > { q.question } < /p> < div className = "space-y-4 mb-12" > {
+        (e) => e.preventDefault() } > </div> < p className = "text-xl leading-relaxed text-gray-800 mb-10" > { q.question } </p> < div className = "space-y-4 mb-12" > {
         q.options.map((opt, i) => ( < button key = { i } onClick = {
           () => setSelected(i) } className = { `group relative w-full p-6 rounded-2xl border-3 font-medium text-left transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl ${
                   selected === i
@@ -568,10 +569,10 @@ export default function MathExam() {
                       selected === i
                         ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-300/50'
                         : 'bg-card border-gray-300 text-gray-600 shadow-sm'
-                    }` } > { String.fromCharCode(65 + i) } < /div> < span className = "text-lg leading-relaxed" > { opt } < /span> < /div> < /button>))
-      } < /div> {
-        currentQ === currentQuestions.length - 1 && ( < div className = "mt-8" > < h3 className = "text-2xl font-bold mb-4" > Pregunta de Redacción Final < /h3> { /* Selección de pregunta */ } {
-          !redaccionSelected ? ( < div className = "mb-6" > < p className = "text-lg mb-4" > Seleccione una de las siguientes consignas para desarrollar: < /p> < select value = ""
+                    }` } > { String.fromCharCode(65 + i) } </div> < span className = "text-lg leading-relaxed" > { opt } </span> </div> </button>))
+      } </div> {
+        currentQ === currentQuestions.length - 1 && ( < div className = "mt-8" > < h3 className = "text-2xl font-bold mb-4" > Pregunta de Redacción Final </h3> { /* Selección de pregunta */ } {
+          !redaccionSelected ? ( < div className = "mb-6" > < p className = "text-lg mb-4" > Seleccione una de las siguientes consignas para desarrollar: </p> < select value = ""
             onChange = {
               (e) => {
                 const id = parseInt(e.target.value);
@@ -580,12 +581,12 @@ export default function MathExam() {
                 if (selected) alert(`Consigna seleccionada:\n\n${selected.consigna}`);
               }
             }
-            className = "w-full p-4 rounded-xl border-2 border-gray-300 focus:border-indigo-500 outline-none text-lg" > < option value = "" > --Seleccione una consigna-- < /option> {
-              redaccionBanco.map(q => ( < option key = { q.id } value = { q.id } > { q.titulo } < /option>))
-            } < /select> < /div>) : ( < div className = "mb-6" > < p className = "text-xl font-semibold mb-4" > { redaccionBanco.find(q => q.id === redaccionSelected)?.titulo } < /p> < p className = "text-lg mb-4 whitespace-pre-line" > { redaccionBanco.find(q => q.id === redaccionSelected)?.consigna } < /p> < textarea value = { redaccionText } onChange = {
+            className = "w-full p-4 rounded-xl border-2 border-gray-300 focus:border-indigo-500 outline-none text-lg" > < option value = "" > --Seleccione una consigna-- </option> {
+              redaccionBanco.map(q => ( < option key = { q.id } value = { q.id } > { q.titulo } </option>))
+            } </select> </div>) : ( < div className = "mb-6" > < p className = "text-xl font-semibold mb-4" > { redaccionBanco.find(q => q.id === redaccionSelected)?.titulo } </p> < p className = "text-lg mb-4 whitespace-pre-line" > { redaccionBanco.find(q => q.id === redaccionSelected)?.consigna } </p> < textarea value = { redaccionText } onChange = {
               (e) => setRedaccionText(e.target.value) } placeholder = "Escribe tu respuesta aquí... (mínimo 200 palabras)"
-            className = "w-full h-64 p-4 rounded-xl border-2 border-gray-300 focus:border-indigo-500 outline-none text-lg" / > < /div>)
-        } < /div>)
+            className = "w-full h-64 p-4 rounded-xl border-2 border-gray-300 focus:border-indigo-500 outline-none text-lg" / > </div>)
+        } </div>)
       } < div className = "flex justify-end pt-6 border-t-2 border-gray-100" > < button onClick = {
         () => {
           if (currentQ > 0) {
@@ -598,11 +599,11 @@ export default function MathExam() {
       currentQ === 0
         ? 'bg-card-400 text-gray-500 cursor-not-allowed shadow-none'
         : 'bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white shadow-gray-500/50 hover:shadow-gray-500/75 hover:scale-[1.05]'
-    }` } > ←Anterior < /button> < button onClick = { handleNext } disabled = { selected === null || savingAnswer } className = { `px-12 py-5 rounded-2xl font-black text-lg shadow-2xl transition-all transform ${
+    }` } > ←Anterior </button> < button onClick = { handleNext } disabled = { selected === null || savingAnswer } className = { `px-12 py-5 rounded-2xl font-black text-lg shadow-2xl transition-all transform ${
   selected === null || savingAnswer
     ? 'bg-gray-400 text-gray-500 cursor-not-allowed shadow-none'
     : 'btn-primary hover:scale-[1.05] shadow-2xl'
-} ${savingAnswer ? 'opacity-50 cursor-wait' : ''}` } > { currentQ < currentQuestions.length - 1 ? `Siguiente (${currentQ + 2})` : '🎯 Finalizar Examen' } < /button> < /div> < /div> < /div> < /div>);
+} ${savingAnswer ? 'opacity-50 cursor-wait' : ''}` } > { currentQ < currentQuestions.length - 1 ? `Siguiente (${currentQ + 2})` : '🎯 Finalizar Examen' } </button> </div> </div> </div> </div>);
   }
   // ====== RESULTADO FINAL ======
   /*
@@ -653,8 +654,8 @@ export default function MathExam() {
   }
   */
   if (finished) {
-    return ( < div className = "min-h-screen bg-gradient-to-br from-emerald-50 to-green-50 p-8 flex items-center justify-center" > < div className = "max-w-2xl w-full bg-white rounded-3xl shadow-2xl p-12 text-center border-8 border-emerald-200" > < h1 className = "text-5xl font-black text-gray-900 mb-6" > 📊Examen Finalizado < /h1> < div className = "bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-8 mb-8 shadow-inner" > < div className = "mt-6 p-4 bg-white rounded-xl shadow-sm" > < p className = "text-gray-700 font-semibold" > ⏱️Tiempo utilizado: < span className = "font-black text-indigo-600" > { formatTime(3600 - timeLeft) } < /span> < /p> < /div> < /div> < p className = "text-xl text-gray-600 mb-8 max-w-md mx-auto" > Tus respuestas han sido registradas exitosamente.El equipo administrativo te contactará pronto. < /p> < button onClick = {
-      () => window.location.reload() } className = "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black py-5 px-12 rounded-2xl shadow-2xl text-xl transition-all hover:shadow-3xl hover:scale-105" > Finalizar < /button> < /div> < /div>);
+    return ( < div className = "min-h-screen bg-gradient-to-br from-emerald-50 to-green-50 p-8 flex items-center justify-center" > < div className = "max-w-2xl w-full bg-white rounded-3xl shadow-2xl p-12 text-center border-8 border-emerald-200" > < h1 className = "text-5xl font-black text-gray-900 mb-6" > 📊Examen Finalizado </h1> < div className = "bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-8 mb-8 shadow-inner" > < div className = "mt-6 p-4 bg-white rounded-xl shadow-sm" > < p className = "text-gray-700 font-semibold" > ⏱️Tiempo utilizado: < span className = "font-black text-indigo-600" > { formatTime(3600 - timeLeft) } </span> </p> </div> </div> < p className = "text-xl text-gray-600 mb-8 max-w-md mx-auto" > Tus respuestas han sido registradas exitosamente.El equipo administrativo te contactará pronto. </p> < button onClick = {
+      () => window.location.reload() } className = "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black py-5 px-12 rounded-2xl shadow-2xl text-xl transition-all hover:shadow-3xl hover:scale-105" > Finalizar </button> </div> </div>);
   }
   return null; // No debería llegar aquí
 }
