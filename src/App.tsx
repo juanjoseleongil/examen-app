@@ -261,16 +261,30 @@ export default function MathExam() {
       .finally(() => setLoadingResults(false));
   }, [mode, isAdminLoggedIn]);
 
-  useEffect(() => {
+useEffect(() => {
     if (mode !== 'admin' || !isAdminLoggedIn) return;
     
-    const q = query(collection(db, "activeSessions"));
+    // Traemos la colección completa para poder procesar las sesiones "viejas"
+    // Nota: Si el sistema te pide un índice para orderBy, puedes quitarlo temporalmente
+    const q = query(collection(db, "activeSessions"), orderBy("startTime", "desc"));
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const sessions = snapshot.docs.map((doc) => ({
+      const allDocs = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-      })) as ActiveSession[];
-      setActiveSessions(sessions);
+      })) as any[];
+      
+      // FILTRADO EN EL CLIENTE: 
+      // 1. Incluye las sesiones que no tienen el campo 'status' (los 11 usuarios actuales).
+      // 2. Incluye las sesiones marcadas como 'activa'.
+      // 3. Excluye únicamente las marcadas como 'completada'.
+      const activeSessionsOnly = allDocs.filter(session => 
+        session.status !== 'completada'
+      );
+      
+      setActiveSessions(activeSessionsOnly);
+    }, (error) => {
+      console.error("Error en la escucha de sesiones activas:", error);
     });
     
     return () => unsubscribe();
