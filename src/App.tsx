@@ -405,7 +405,7 @@ export default function MathExam() {
         className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center"
       >
         <div className="bg-card rounded-3xl shadow-2xl p-12 border-8 border-purple-200 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-5xl md:text-6xl font-black text-gray-900 dark:text-white break-words">
+          <h1 className="text-5xl md:text-6xl font-black text-gray-900 dark:text-black break-words">
             Panel Administrador
           </h1>
           
