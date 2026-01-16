@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, User, Monitor, Play, Shield } from 'lucide-react'; //CheckCircle, AlertCircle, 
 import { db, auth } from './firebase';
 import {
@@ -82,6 +82,11 @@ interface ActiveSession {
   startTime: Timestamp;
 }
 const MAX_VIOLATIONS = 5;
+const formatTime = (sec: number): string => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
 export default function MathExam() {
   // TODOS LOS STATES AL INICIO
   const [mode, setMode] = useState < 'select' | 'exam' | 'admin' | 'admin-login' > ('select');
@@ -112,6 +117,78 @@ export default function MathExam() {
   const [currentQuestions, setCurrentQuestions] = useState(questionsMAT); // Default a Matemática
   const [redaccionText, setRedaccionText] = useState('');
   const [redaccionSelected, setRedaccionSelected] = useState < number | null > (null);
+  
+  //FUNCIONES LÓGICAS
+  const calculateScore = useCallback((ans: Record<number, number>) => {
+  let correct = 0;
+  const details: QuestionDetail[] = [];
+  currentQuestions.forEach((q, i) => {
+    const userAnswer = ans[i];
+    const isCorrect = userAnswer === q.correct;
+    if (isCorrect) correct++;
+    details.push({
+      question: q.id,
+      userAnswer: userAnswer ?? undefined,
+      correctAnswer: q.correct,
+      isCorrect,
+      questionText: q.question,
+    });
+  });
+  const pct = (correct / currentQuestions.length) * 100;
+  return {
+    correct,
+    total: currentQuestions.length,
+    pct: pct.toFixed(1),
+    passed: pct >= 70,
+    details,
+  };
+}, [currentQuestions]);
+
+const finishExam = useCallback(async () => {
+  const score = calculateScore(answers);
+  const newResult: Omit<ExamResult, 'id'> = {
+    name: candidateName,
+    idNumber: candidateId,
+    date: new Date().toISOString(),
+    timeUsed: formatTime(3600 - timeLeft),
+    ip: await fetch('https://api.ipify.org?format=json')
+      .then(res => res.json())
+      .then(data => data.ip)
+      .catch(() => 'IP no disponible'),
+    userAgent: navigator.userAgent,
+    correct: score.correct,
+    total: score.total,
+    pct: score.pct,
+    passed: score.passed,
+    details: score.details,
+    violations: proctorViolations,
+    asignatura: selectedAsignatura,
+    redaccion: redaccionText.trim(),
+  };
+
+  try {
+    await addDoc(collection(db, "results"), newResult);
+    if (sessionId) {
+      await deleteDoc(doc(db, "activeSessions", sessionId));
+    }
+  } catch (error) {
+    console.error("Error finalizando:", error);
+    alert("Error al guardar.");
+  }
+  
+  if (proctorViolations >= MAX_VIOLATIONS) {
+    await addDoc(collection(db, "bannedCandidates"), {
+      idNumber: candidateId.trim().toLowerCase(),
+      bannedAt: new Date().toISOString(),
+      violations: proctorViolations,
+      reason: "Exceso en cambios de pestaña/ventana/minimización"
+    });
+  }
+
+  setFinished(true);
+  setProctoringActive(false);
+}, [calculateScore, answers, candidateName, candidateId, timeLeft, proctorViolations, selectedAsignatura, redaccionText, sessionId]);
+
   // TODOS LOS EFFECTS AL INICIO, CON LÓGICA CONDICIONAL DENTRO
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -128,7 +205,7 @@ export default function MathExam() {
     } else if (timeLeft === 0 && started && !finished) {
       finishExam();
     }
-  }, [started, finished, timeLeft]);
+  }, [started, finished, timeLeft, finishExam]);
   useEffect(() => {
     if (mode !== 'admin' || !isAdminLoggedIn) return;
     setLoadingResults(true);
@@ -209,36 +286,7 @@ export default function MathExam() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleBlur);
     };
-  }, [started, finished, proctorLocked, proctorWarningShown]);
-  const formatTime = (sec: number): string => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-  const calculateScore = (ans: Record < number, number > ) => {
-    let correct = 0;
-    const details: QuestionDetail[] = [];
-    currentQuestions.forEach((q, i) => {
-      const userAnswer = ans[i];
-      const isCorrect = userAnswer === q.correct;
-      if (isCorrect) correct++;
-      details.push({
-        question: q.id,
-        userAnswer: userAnswer ?? null,
-        correctAnswer: q.correct,
-        isCorrect,
-        questionText: q.question,
-      });
-    });
-    const pct = (correct / currentQuestions.length) * 100;
-    return {
-      correct,
-      total: currentQuestions.length,
-      pct: pct.toFixed(1),
-      passed: pct >= 70,
-      details,
-    };
-  };
+  }, [started, finished, proctorLocked, proctorWarningShown, justHandledViolation, finishExam]); // <-- Añadidos los dos últimos
   const [savingAnswer, setSavingAnswer] = useState(false);
   const handleNext = async () => {
     setViolationMessage(''); // Limpia mensaje de violación (ya lo tienes)
@@ -267,44 +315,7 @@ export default function MathExam() {
       finishExam();
     }
   };
-  const finishExam = async () => {
-    const score = calculateScore(answers);
-    const newResult: Omit < ExamResult, 'id' > = {
-      name: candidateName,
-      idNumber: candidateId,
-      date: new Date().toISOString(),
-      timeUsed: formatTime(3600 - timeLeft),
-      ip: await fetch('https://api.ipify.org?format=json').then(res => res.json()).then(data => data.ip).catch(() => 'IP no disponible'),
-      userAgent: navigator.userAgent,
-      correct: score.correct,
-      total: score.total,
-      pct: score.pct,
-      passed: score.passed,
-      details: score.details,
-      violations: proctorViolations,
-      asignatura: selectedAsignatura,
-      redaccion: redaccionText.trim(),
-    };
-    try {
-      await addDoc(collection(db, "results"), newResult);
-      if (sessionId) {
-        await deleteDoc(doc(db, "activeSessions", sessionId));
-      }
-    } catch (error) {
-      console.error("Error finalizando:", error);
-      alert("Error al guardar. Revisa consola.");
-    }
-    if (proctorViolations >= MAX_VIOLATIONS) {
-      await addDoc(collection(db, "bannedCandidates"), {
-        idNumber: candidateId.trim().toLowerCase(),
-        bannedAt: new Date().toISOString(),
-        violations: proctorViolations,
-        reason: "Exceso en cambios de pestaña/ventana/minimización"
-      });
-    }
-    setFinished(true);
-    setProctoringActive(false);
-  };
+  
   // ====== RENDER (TODOS LOS RETURNS AQUÍ) ======
   if (mode === 'select') {
     return ( < div className = "min-h-screen bg-main p-6"
