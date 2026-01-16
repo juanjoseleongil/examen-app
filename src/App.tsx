@@ -13,12 +13,29 @@ import {
   serverTimestamp,
   deleteDoc,
   Timestamp,
+  where,
 } from "firebase/firestore";
 import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
+
+import {
+  questionsMAT,
+  questionsHLC,
+  questionsHLE,
+  questionsCNA,
+  questionsCSO,
+  questionsART,
+  questionsETI,
+  questionsEDF,
+  questionsTEC,
+  questionsSEG,
+  questionsCTE,
+  questionsAUC,
+  redaccionBanco,
+} from './questions';
 
 // === TIPOS PERSONALIZADOS ===
 interface Candidate {
@@ -53,6 +70,9 @@ interface ExamResult {
   pct: string;
   passed: boolean;
   details: QuestionDetail[];
+  violations: number;
+  asignatura: string;
+  redaccion: string;
 }
 
 interface ActiveSession {
@@ -65,53 +85,7 @@ interface ActiveSession {
   startTime: Timestamp;
 }
 
-const questions = [
-  { id: 1, question: "Un docente trabaja el número 15 con material concreto, dibujos y símbolos. ¿Qué concepto matemático está fortaleciendo principalmente?", options: ["El cálculo algorítmico", "La noción de número", "La resolución de ecuaciones", "El pensamiento aleatorio"], correct: 1 },
-  { id: 2, question: "Cuando un estudiante usa los números para decir quién llegó primero, segundo o tercero, está usando el número como:", options: ["Cardinal", "Código", "Ordinal", "Medida"], correct: 2 },
-  { id: 3, question: "¿Cuál de las siguientes actividades es más adecuada para introducir la suma en grado primero?", options: ["Resolver operaciones escritas sin apoyo visual", "Memorizar tablas de sumar", "Unir colecciones de objetos concretos", "Resolver problemas con decimales"], correct: 2 },
-  { id: 4, question: "Un docente pide a sus estudiantes que representen el número 23 en el ábaco. Esta actividad favorece principalmente:", options: ["La memorización de cifras", "El valor posicional", "La comparación de fracciones", "El pensamiento variacional"], correct: 1 },
-  { id: 5, question: "¿Cuál situación evidencia el uso del número como medida?", options: ["Contar cuántos lápices hay en el estuche", "Decir el número del salón", "Medir cuántos pasos hay del tablero a la puerta", "Decir quién ocupa el tercer puesto"], correct: 2 },
-  { id: 6, question: "Un estudiante representa el número 34.572 identificando unidades, decenas, centenas y millares. ¿Qué concepto está fortaleciendo principalmente el docente?", options: ["La seriación", "El valor posicional", "La estimación", "La medición"], correct: 1 },
-  { id: 7, question: "¿Cuál situación es más adecuada para evaluar la sustracción en un contexto significativo para grado segundo?", options: ["Resolver restas con números negativos", "Quitar elementos de una colección concreta", "Memorizar resultados", "Resolver ecuaciones"], correct: 1 },
-  { id: 8, question: "Cuando un docente introduce la multiplicación como suma repetida, está favoreciendo:", options: ["El cálculo mecánico", "La comprensión conceptual", "La memorización de tablas", "El pensamiento algebraico avanzado"], correct: 1 },
-  { id: 9, question: "¿Cuál de las siguientes actividades permite evaluar mejor la división en grado segundo?", options: ["Resolver divisiones con residuo grande", "Repartir equitativamente objetos entre varios estudiantes", "Resolver ejercicios escritos extensos", "Memorizar el algoritmo"], correct: 1 },
-  { id: 10, question: "El uso del reloj para identificar horas y medias horas fortalece principalmente el pensamiento:", options: ["Numérico", "Aleatorio", "Métrico", "Variacional"], correct: 2 },
-  { id: 11, question: "Un docente trabaja problemas donde los estudiantes deben explicar cómo resolvieron una operación. Esta estrategia fortalece principalmente:", options: ["El cálculo mecánico", "La memorización", "El razonamiento matemático", "La velocidad operativa"], correct: 2 },
-  { id: 12, question: "Cuando un estudiante compara fracciones como 1/2 y 1/4 usando material concreto, se está priorizando:", options: ["El algoritmo de fracciones", "La comprensión del significado de la fracción", "La memorización de reglas", "El uso de números decimales"], correct: 1 },
-  { id: 13, question: "¿Cuál actividad es más adecuada para introducir el concepto de perímetro en grado tercero?", options: ["Resolver fórmulas escritas", "Medir el contorno de objetos reales", "Calcular áreas complejas", "Memorizar definiciones"], correct: 1 },
-  { id: 14, question: "El uso de problemas que combinan multiplicación y división favorece principalmente:", options: ["El pensamiento aleatorio", "La mecanización del cálculo", "La comprensión de relaciones entre operaciones", "El aprendizaje memorístico"], correct: 2 },
-  { id: 15, question: "Cuando los estudiantes organizan datos en tablas o gráficos sencillos, el pensamiento que se fortalece es:", options: ["Numérico", "Espacial", "Aleatorio", "Variacional"], correct: 2 },
-  { id: 16, question: "Un docente propone problemas donde los estudiantes deben identificar múltiplos y divisores de un número en situaciones cotidianas. ¿Qué pensamiento matemático se fortalece principalmente?", options: ["Aleatorio", "Numérico", "Espacial", "Variacional"], correct: 1 },
-  { id: 17, question: "¿Cuál estrategia es más pertinente para introducir las fracciones equivalentes en grado cuarto?", options: ["Memorizar reglas de amplificación", "Usar representaciones gráficas de una misma cantidad", "Resolver operaciones algebraicas", "Trabajar solo con ejercicios escritos"], correct: 1 },
-  { id: 18, question: "Cuando un estudiante reconoce que 0,5 y 1/2 representan la misma cantidad, está demostrando:", options: ["Dominio del algoritmo", "Comprensión de equivalencia numérica", "Uso de porcentajes", "Cálculo mental avanzado"], correct: 1 },
-  { id: 19, question: "El cálculo del perímetro y el área de figuras planas contribuye principalmente al desarrollo del pensamiento:", options: ["Numérico", "Aleatorio", "Métrico", "Variacional"], correct: 2 },
-  { id: 20, question: "Un docente pide construir figuras con material manipulativo para analizar sus propiedades. Esta estrategia favorece:", options: ["El aprendizaje memorístico", "El pensamiento geométrico", "El cálculo automático", "La repetición de fórmulas"], correct: 1 },
-  { id: 21, question: "Un docente propone problemas donde los estudiantes comparan fracciones y decimales en situaciones reales. Esta estrategia fortalece principalmente:", options: ["La memorización de reglas", "La comprensión de la equivalencia numérica", "El cálculo automático", "El pensamiento aleatorio"], correct: 1 },
-  { id: 22, question: "El uso de potenciación en grado quinto tiene como propósito principal:", options: ["Introducir el álgebra avanzada", "Repetir sumas de manera abreviada", "Memorizar fórmulas", "Resolver ecuaciones"], correct: 1 },
-  { id: 23, question: "Cuando un estudiante ubica puntos en el plano cartesiano, está desarrollando principalmente:", options: ["Pensamiento aleatorio", "Pensamiento numérico", "Pensamiento espacial", "Pensamiento métrico"], correct: 2 },
-  { id: 24, question: "El trabajo con ángulos y sus medidas fortalece el pensamiento:", options: ["Numérico", "Variacional", "Métrico", "Aleatorio"], correct: 2 },
-  { id: 25, question: "Un docente utiliza situaciones de la vida diaria para introducir igualdades y desigualdades. ¿Qué se busca principalmente?", options: ["Uso mecánico de símbolos", "Comprensión del lenguaje matemático", "Memorización de signos", "Cálculo rápido"], correct: 1 },
-  { id: 26, question: "Un estudiante inicia el día con una deuda de $15.000. Luego paga $9.000 y más tarde adquiere una nueva deuda de $6.000. ¿Cuál es su situación final?", options: ["Debe $12.000", "Debe $6.000", "No debe nada", "Tiene $6.000 a favor"], correct: 1 },
-  { id: 27, question: "La temperatura a las 6:00 a. m. es de −4 °C. Al mediodía sube 11 °C y en la noche baja 5 °C. ¿Cuál es la temperatura final?", options: ["2 °C", "−2 °C", "7 °C", "−10 °C"], correct: 0 },
-  { id: 28, question: "En una papelería, 4 cuadernos cuestan $10.000. Si el precio es proporcional, ¿cuánto cuestan 10 cuadernos?", options: ["$20.000", "$22.500", "$25.000", "$30.000"], correct: 2 },
-  { id: 29, question: "Un rectángulo tiene largo de 12 cm y ancho de 7 cm. ¿Cuál es su perímetro?", options: ["38 cm", "76 cm", "84 cm", "19 cm"], correct: 0 },
-  { id: 30, question: "En un curso hay 18 niñas y 12 niños. Si se quiere formar grupos de 5 estudiantes, ¿cuántos grupos completos se pueden formar?", options: ["5", "6", "7", "8"], correct: 1 },
-  { id: 31, question: "Para preparar una mezcla se usan 3 litros de agua por cada 2 litros de concentrado. Si se necesitan 15 litros de agua, ¿cuántos litros de concentrado se deben usar?", options: ["8", "9", "10", "12"], correct: 2 },
-  { id: 32, question: "Un carro recorre 180 km en 3 horas a velocidad constante. ¿Cuánto tiempo tardará en recorrer 300 km manteniendo la misma velocidad?", options: ["4 horas", "4,5 horas", "5 horas", "6 horas"], correct: 2 },
-  { id: 33, question: "Un terreno rectangular tiene área de 96 m² y uno de sus lados mide 12 m. ¿Cuánto mide el otro lado?", options: ["6 m", "8 m", "10 m", "14 m"], correct: 1 },
-  { id: 34, question: "Para construir una maqueta, la escala es 1 : 50. Si una pared mide 4 m en la realidad, ¿cuánto mide en la maqueta?", options: ["4 cm", "6 cm", "8 cm", "10 cm"], correct: 2 },
-  { id: 35, question: "En una fábrica, 8 operarios realizan un trabajo en 12 días. Si se contratan 12 operarios, ¿en cuántos días se realizará el mismo trabajo?", options: ["6", "8", "10", "18"], correct: 1 },
-  { id: 36, question: "Un número aumentado en 7 es igual a 3 veces ese número disminuido en 5. ¿Cuál es el número?", options: ["4", "6", "8", "11"], correct: 3 },
-  { id: 37, question: "Una camisa cuesta $60.000 y se le aplica un descuento del 20%. Luego se le aplica un IVA del 19% sobre el precio con descuento. ¿Cuál es el precio final?", options: ["$45.600", "$49.000", "$57.120", "$61.200"], correct: 2 },
-  { id: 38, question: "Un rectángulo tiene base (x + 4) y altura (x − 2). Si el área es 48 unidades², ¿cuál es el valor de x?", options: ["4", "6", "8", "12"], correct: 1 },
-  { id: 39, question: "La suma de tres números consecutivos es 72. ¿Cuál es el número mayor?", options: ["22", "23", "24", "25"], correct: 3 },
-  { id: 40, question: "Un cuadrado tiene perímetro de 40 cm. ¿Cuál es su área?", options: ["25 cm²", "64 cm²", "100 cm²", "160 cm²"], correct: 2 },
-  { id: 41, question: "La suma de dos números es 30 y su diferencia es 6. ¿Cuáles son los números?", options: ["12 y 18", "14 y 16", "18 y 12", "24 y 6"], correct: 2 },
-  { id: 42, question: "Un rectángulo tiene perímetro de 52 cm. La base mide 4 cm más que la altura. ¿Cuánto mide la base?", options: ["13 cm", "14 cm", "15 cm", "16 cm"], correct: 2 },
-  { id: 43, question: "La función que representa el costo ( C ) de un servicio es ( C(x) = 8.000x + 12.000 ), donde ( x ) es el número de horas. ¿Cuál es el costo por 5 horas?", options: ["$40.000", "$52.000", "$60.000", "$68.000"], correct: 1 },
-  { id: 44, question: "Un cuadrado tiene un área de 81 cm². ¿Cuál es el perímetro del cuadrado?", options: ["18 cm", "24 cm", "32 cm", "36 cm"], correct: 3 },
-  { id: 45, question: "En una encuesta, el 40% de los estudiantes son mujeres. Si participaron 120 estudiantes, ¿cuántos son hombres?", options: ["40", "48", "72", "80"], correct: 2 }
-];
+const MAX_VIOLATIONS = 5;
 
 export default function MathExam() {
   // TODOS LOS STATES AL INICIO
@@ -133,6 +107,16 @@ export default function MathExam() {
   const [loadingResults, setLoadingResults] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [expandedResultId, setExpandedResultId] = useState<string | null>(null);
+  const [startingExam, setStartingExam] = useState(false);
+  const [proctorViolations, setProctorViolations] = useState(0);  // Conteo de violaciones
+  const [proctorLocked, setProctorLocked] = useState(false);     // Bloqueo permanente si >3
+  const [proctorWarningShown, setProctorWarningShown] = useState(false);  // Para mostrar alerta solo una vez por violación
+  const [justHandledViolation, setJustHandledViolation] = useState(false);
+  const [violationMessage, setViolationMessage] = useState('');
+  const [selectedAsignatura, setSelectedAsignatura] = useState('');
+  const [currentQuestions, setCurrentQuestions] = useState(questionsMAT);  // Default a Matemática
+  const [redaccionText, setRedaccionText] = useState('');
+  const [redaccionSelected, setRedaccionSelected] = useState<number | null>(null);
 
   // TODOS LOS EFFECTS AL INICIO, CON LÓGICA CONDICIONAL DENTRO
   useEffect(() => {
@@ -198,7 +182,60 @@ export default function MathExam() {
     };
 
     updateSession();
+    document.body.style.userSelect = 'none'; //agregado para evitar selección por parte del usuario
   }, [currentQ, timeLeft, sessionId, started, finished]);
+  
+  useEffect(() => {
+  if (!started || finished || proctorLocked) return;
+
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'hidden') {
+      handleViolation();
+    }
+  };
+
+  const handleBlur = () => {
+    handleViolation();
+  };
+
+  const handleViolation = () => {
+  if (proctorWarningShown || justHandledViolation) return;
+
+  setJustHandledViolation(true);
+  setProctorWarningShown(true);
+
+  setProctorViolations((prev) => {
+    const newCount = prev + 1;
+    if (newCount >= MAX_VIOLATIONS) {
+  setViolationMessage("Debido a reincidencia en movimientos no permitidos (minimizar ventana, cambiar pestaña o ventana), su examen se termina automáticamente.");
+
+  // Delay de 5 segundos antes de finalizar
+  setTimeout(() => {
+    setProctorLocked(true);
+    finishExam();
+  }, 5000);
+
+  return newCount;
+} else {
+  setViolationMessage(`Se ha detectado un movimiento no permitido (minimizar ventana, cambiar pestaña o ventana). Por favor evite: minimizar, cambiar pestañas o ventanas. Intentos restantes: ${MAX_VIOLATIONS - newCount}`);
+  return newCount;
+}
+  });
+
+  setTimeout(() => {
+    setProctorWarningShown(false);
+    setJustHandledViolation(false);
+  }, 3000);
+};
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  window.addEventListener('blur', handleBlur);
+
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('blur', handleBlur);
+  };
+}, [started, finished, proctorLocked, proctorWarningShown]);
 
   const formatTime = (sec: number): string => {
     const m = Math.floor(sec / 60);
@@ -209,7 +246,7 @@ export default function MathExam() {
   const calculateScore = (ans: Record<number, number>) => {
     let correct = 0;
     const details: QuestionDetail[] = [];
-    questions.forEach((q, i) => {
+    currentQuestions.forEach((q, i) => {
       const userAnswer = ans[i];
       const isCorrect = userAnswer === q.correct;
       if (isCorrect) correct++;
@@ -221,26 +258,49 @@ export default function MathExam() {
         questionText: q.question,
       });
     });
-    const pct = (correct / questions.length) * 100;
+    const pct = (correct / currentQuestions.length) * 100;
     return {
       correct,
-      total: questions.length,
+      total: currentQuestions.length,
       pct: pct.toFixed(1),
       passed: pct >= 70,
       details,
     };
   };
+  
+  const [savingAnswer, setSavingAnswer] = useState(false);
 
-  const handleNext = () => {
-    if (selected === null) return;
-    setAnswers((prev) => ({ ...prev, [currentQ]: selected }));
-    if (currentQ < questions.length - 1) {
-      setCurrentQ((prev) => prev + 1);
-      setSelected(null);
-    } else {
-      finishExam();
+const handleNext = async () => {
+  setViolationMessage(''); // Limpia mensaje de violación (ya lo tienes)
+
+  if (selected === null) return;
+
+  // Validación de redacción SOLO en la última pregunta
+  if (currentQ === currentQuestions.length - 1) {
+    if (!redaccionSelected) {
+      alert("Debe seleccionar una consigna de redacción antes de finalizar.");
+      return;
     }
-  };
+    if (redaccionText.trim().length < 200) {
+      alert("La redacción debe tener al menos 200 caracteres. Por favor complete su respuesta.");
+      return;
+    }
+  }
+
+  // Tu lógica actual de guardado
+  setSavingAnswer(true);
+  setAnswers(prev => ({ ...prev, [currentQ]: selected })); // guardar
+  await new Promise(resolve => setTimeout(resolve, 0)); // esperar el siguiente render
+  setSavingAnswer(false);
+
+  // Avanzar o finalizar
+  if (currentQ < currentQuestions.length - 1) {
+    setCurrentQ((prev) => prev + 1);
+    setSelected(null);
+  } else {
+    finishExam();
+  }
+};
 
   const finishExam = async () => {
     const score = calculateScore(answers);
@@ -249,13 +309,19 @@ export default function MathExam() {
       idNumber: candidateId,
       date: new Date().toISOString(),
       timeUsed: formatTime(3600 - timeLeft),
-      ip: 'Simulada (producción: usaría IP real)',
+      ip: await fetch('https://api.ipify.org?format=json')
+  .then(res => res.json())
+  .then(data => data.ip)
+  .catch(() => 'IP no disponible'),
       userAgent: navigator.userAgent,
       correct: score.correct,
       total: score.total,
       pct: score.pct,
       passed: score.passed,
       details: score.details,
+      violations: proctorViolations,
+      asignatura: selectedAsignatura,
+      redaccion: redaccionText.trim(),
     };
 
     try {
@@ -267,6 +333,15 @@ export default function MathExam() {
       console.error("Error finalizando:", error);
       alert("Error al guardar. Revisa consola.");
     }
+    
+    if (proctorViolations >= MAX_VIOLATIONS) {
+  await addDoc(collection(db, "bannedCandidates"), {
+    idNumber: candidateId.trim().toLowerCase(),
+    bannedAt: new Date().toISOString(),
+    violations: proctorViolations,
+    reason: "Exceso en cambios de pestaña/ventana/minimización"
+  });
+}
 
     setFinished(true);
     setProctoringActive(false);
@@ -275,28 +350,33 @@ export default function MathExam() {
   // ====== RENDER (TODOS LOS RETURNS AQUÍ) ======
   if (mode === 'select') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" id = "exc1"
+      <div className="min-h-screen bg-main p-6" id = "examen-container"
       onCopy={(e) => e.preventDefault()}
       onContextMenu={(e) => e.preventDefault()}
+      onMouseDown={(e) => {
+    // Opcional: evita selección con mouse en desktop
+    if (e.button === 0) e.preventDefault();
+  }}
       >
-        <div className="max-w-4xl w-full bg-white rounded-3xl shadow-2xl p-16 text-center border-8 border-indigo-200">
-          <h1 className="text-5xl font-black text-gray-900 mb-12">Examen de Admisión - Matemáticas</h1>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            <button
-              onClick={() => setMode('exam')}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black py-8 px-16 rounded-3xl shadow-2xl text-3xl transition-all hover:shadow-3xl hover:scale-105"
-            >
-              <Play className="w-12 h-12 mx-auto mb-4" />
-              CANDIDATO
-            </button>
-            <button
-              onClick={() => setMode('admin-login')}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-black py-8 px-16 rounded-3xl shadow-2xl text-3xl transition-all hover:shadow-3xl hover:scale-105"
-            >
-              <Shield className="w-12 h-12 mx-auto mb-4" />
-              ADMINISTRADOR
-            </button>
-          </div>
+        <div className="max-w-4xl w-full bg-card rounded-3xl shadow-2xl p-16 text-center border-8 border-indigo-200">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-primary mb-6 tracking-tight">Prueba de conocimientos específicos</h1>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+  <button
+    onClick={() => setMode('exam')}
+    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black py-8 px-6 md:px-16 rounded-3xl shadow-2xl text-2xl md:text-3xl transition-all hover:shadow-3xl hover:scale-105 flex flex-col items-center justify-center min-h-[180px] whitespace-normal break-words text-center"
+  >
+    <Play className="w-12 h-12 mb-4" />
+    PROFE
+  </button>
+
+  <button
+    onClick={() => setMode('admin-login')}
+    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-black py-8 px-6 md:px-16 rounded-3xl shadow-2xl text-2xl md:text-3xl transition-all hover:shadow-3xl hover:scale-105 flex flex-col items-center justify-center min-h-[180px] whitespace-normal break-words text-center"
+  >
+    <Shield className="w-12 h-12 mb-4" />
+    ADMINISTRADOR
+  </button>
+</div>
         </div>
       </div>
     );
@@ -304,14 +384,18 @@ export default function MathExam() {
 
   if (mode === 'admin-login') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" >
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-12 border-8 border-purple-200">
-          <h1 className="text-4xl font-black text-gray-900 mb-8 text-center">Panel Administrador</h1>
+      <div data-screen="candidate-info" className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" >
+        <div className="bg-card rounded-3xl shadow-2xl p-12 border-8 border-purple-200 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h1 className="text-5xl md:text-6xl font-black text-gray-900 dark:text-white break-words">  {/* ← Agrega break-words */}
+          Panel Administrador
+        </h1>
           <input
             type="email"
             value={adminEmail}
             onChange={(e) => setAdminEmail(e.target.value)}
             placeholder="Email administrador"
+            pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+            title="Ingresa un correo válido (ej. ejemplo@dominio.com)"
             className="w-full p-4 mb-4 rounded-xl border-2 border-gray-300 focus:border-purple-500 outline-none"
           />
           <input
@@ -340,216 +424,413 @@ export default function MathExam() {
     );
   }
 
-  if (mode === 'admin') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-5xl font-black text-gray-900">Panel Administrador</h1>
-            <button
-              onClick={async () => {
-                await signOut(auth);
-                setIsAdminLoggedIn(false);
-                setMode('select');
-              }}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg"
-            >
-              Cerrar Sesión
-            </button>
-          </div>
-
-          {/* CANDIDATOS EN VIVO */}
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center">
-              <Monitor className="w-10 h-10 mr-4 text-emerald-600" />
-              Candidatos en vivo ({activeSessions.length})
-            </h2>
-            {activeSessions.length === 0 ? (
-              <p className="text-xl text-gray-600">No hay candidatos activos en este momento.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {activeSessions.map(session => (
-                  <div key={session.id} className="bg-white rounded-2xl shadow-xl p-6 border-l-4 border-emerald-500">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xl font-bold text-gray-900">{session.name}</h3>
-                      <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-sm font-bold animate-pulse">
-                        ACTIVO
-                      </span>
-                    </div>
-                    <p className="text-gray-600 mb-2">Cédula: {session.idNumber}</p>
-                    <p className="text-lg font-semibold mb-2">
-                      Pregunta: <span className="text-indigo-600">{session.currentQuestion}/{questions.length}</span>
-                    </p>
-                    <p className="text-lg font-semibold mb-2">
-                      Tiempo restante: <span className="text-red-600">{formatTime(session.timeLeft)}</span>
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Última actividad: {session.lastActivity?.toDate?.().toLocaleTimeString() || 'Ahora'}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* RESULTADOS FINALIZADOS */}
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">Resultados finalizados</h2>
-          {loadingResults ? (
-            <p className="text-center text-2xl">Cargando resultados...</p>
-          ) : results.length === 0 ? (
-            <p className="text-center text-2xl text-gray-600">No hay resultados aún.</p>
-          ) : (
-            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
-                  <tr>
-                    <th className="p-6 text-left">Nombre</th>
-                    <th className="p-6 text-left">Cédula</th>
-                    <th className="p-6 text-left">Fecha</th>
-                    <th className="p-6 text-center">Correctas</th>
-                    <th className="p-6 text-center">Porcentaje</th>
-                    <th className="p-6 text-center">Estado</th>
-                    <th className="p-6 text-center">Tiempo</th>
-                    <th className="p-6 text-center">Detalles</th>
-                  </tr>
-                </thead>
-<tbody>
-  {results.map((r) => (
-    <>
-      <tr key={r.id} className="border-b hover:bg-gray-50">
-        <td className="p-6">{r.name}</td>
-        <td className="p-6">{r.idNumber}</td>
-        <td className="p-6">{new Date(r.date).toLocaleString('es-CO')}</td>
-        <td className="p-6 text-center">{r.correct}/{r.total}</td>
-        <td className="p-6 text-center font-bold" style={{ color: r.passed ? '#059669' : '#dc2626' }}>
-          {r.pct}%
-        </td>
-        <td className="p-6 text-center font-bold">
-          {r.passed ? 'APROBADO' : 'NO APROBADO'}
-        </td>
-        <td className="p-6 text-center">{r.timeUsed}</td>
-        <td className="p-6 text-center">
+if (mode === 'admin') {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-primary mb-6 tracking-tight">Panel Administrador</h1>
           <button
-            onClick={() => setExpandedResultId(expandedResultId === r.id ? null : r.id)}
-            className="bg-indigo-600 text-white py-1 px-3 rounded-lg hover:bg-indigo-700"
+            onClick={async () => {
+              await signOut(auth);
+              setIsAdminLoggedIn(false);
+              setMode('select');
+            }}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg"
           >
-            {expandedResultId === r.id ? 'Ocultar' : 'Ver Detalles'}
+            Cerrar Sesión
           </button>
-        </td>
-      </tr>
-      {expandedResultId === r.id && (
-        <tr>
-          <td colSpan={8} className="p-6 bg-gray-50">
-            <div className="max-h-64 overflow-y-auto">
-              <table className="w-full table-auto">
-                <thead>
-                  <tr className="bg-gray-200">
-                    <th className="p-2">Pregunta</th>
-                    <th className="p-2">Respuesta del candidato</th>
-                    <th className="p-2">Respuesta correcta</th>
-                    <th className="p-2">Correcta</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {r.details.map((detail, index) => (
-                    <tr key={index} className="border-b">
-                      <td className="p-2">{detail.questionText.slice(0, 50)}...</td>
-                      <td className="p-2">{detail.userAnswer ? String.fromCharCode(65 + detail.userAnswer) : 'No respondida'}</td>
-                      <td className="p-2">{String.fromCharCode(65 + detail.correctAnswer)}</td>
-                      <td className="p-2">{detail.isCorrect ? 'Sí' : 'No'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
-  ))}
-</tbody>
-              </table>
+        </div>
+
+        {/* PROFESORES EN VIVO */}
+        <div className="mb-12">
+          <h2 className="text-4xl md:text-5xl font-bold text-primary mb-8 flex items-center gap-4">
+            <Monitor className="w-10 h-10 mr-4 text-emerald-600" />
+            Profesores en vivo ({activeSessions.length})
+          </h2>
+          {activeSessions.length === 0 ? (
+            <p className="text-xl text-gray-600">No hay profesores activos en este momento.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {activeSessions.map(session => (
+                <div key={session.id} className="bg-card rounded-2xl shadow-xl p-6 border-l-4 border-emerald-500">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-2xl md:text-3xl font-semibold text-accent mb-4">{session.name}</h3>
+                    <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-sm font-bold animate-pulse">
+                      ACTIVO
+                    </span>
+                  </div>
+                  <p className="text-gray-600 mb-2">Cédula: {session.idNumber}</p>
+                  <p className="text-lg font-semibold mb-2">
+                    Pregunta: <span className="text-indigo-600">{session.currentQuestion}/{currentQuestions.length}</span>
+                  </p>
+                  <p className="text-lg font-semibold mb-2">
+                    Tiempo restante: <span className="text-red-600">{formatTime(session.timeLeft)}</span>
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Última actividad: {session.lastActivity?.toDate?.().toLocaleTimeString() || 'Ahora'}
+                  </p>
+                </div>
+              ))}
             </div>
           )}
         </div>
-      </div>
-    );
-  }
 
-  // ====== EXAMEN (CANDIDATO) ======
+        {/* RESULTADOS FINALIZADOS */}
+        <h2 className="text-4xl md:text-5xl font-bold text-primary mb-8 flex items-center gap-4">Resultados finalizados</h2>
+        {loadingResults ? (
+          <p className="text-center text-2xl">Cargando resultados...</p>
+        ) : results.length === 0 ? (
+          <p className="text-center text-2xl text-gray-600">No hay resultados aún.</p>
+        ) : (
+          <div className="bg-card rounded-3xl shadow-2xl overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+                <tr>
+                  <th className="p-6 text-left">Nombre</th>
+                  <th className="p-6 text-left">Cédula</th>
+                  <th className="p-6 text-left">Asignatura</th>
+                  <th className="p-6 text-left">Fecha</th>
+                  <th className="p-6 text-center">Correctas</th>
+                  <th className="p-6 text-center">Porcentaje</th>
+                  <th className="p-6 text-center">Estado</th>
+                  <th className="p-6 text-center">Tiempo</th>
+                  <th className="p-6 text-center">Violaciones</th>
+                  <th className="p-6 text-center">Detalles</th>
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((r) => (
+                  <>
+                    <tr key={r.id} className="border-b hover:bg-card-50">
+                      <td className="p-6">{r.name}</td>
+                      <td className="p-6">{r.idNumber}</td>
+                      <td className="p-6">{r.asignatura}</td>
+                      <td className="p-6">{new Date(r.date).toLocaleString('es-CO')}</td>
+                      <td className="p-6 text-center">{r.correct}/{r.total}</td>
+                      <td className="p-6 text-center font-bold" style={{ color: r.passed ? '#059669' : '#dc2626' }}>
+                        {r.pct}%
+                      </td>
+                      <td className="p-6 text-center font-bold">
+                        {r.passed ? 'APROBADO' : 'NO APROBADO'}
+                      </td>
+                      <td className="p-6 text-center">{r.timeUsed}</td>
+                      <td className="p-6 text-center font-bold" style={{ color: r.violations > 0 ? '#dc2626' : '#059669' }}>
+                        {r.violations || 0}
+                      </td>
+                      <td className="p-6 text-center">
+                        <button
+                          onClick={() => setExpandedResultId(expandedResultId === r.id ? null : r.id)}
+                          className="bg-indigo-600 text-white py-1 px-3 rounded-lg hover:bg-indigo-700"
+                        >
+                          {expandedResultId === r.id ? 'Ocultar' : 'Ver Detalles'}
+                        </button>
+                      </td>
+                    </tr>
+
+                    {expandedResultId === r.id && (
+                      <tr>
+                        <td colSpan={10} className="p-6 bg-card-50">
+                          <div className="max-h-96 overflow-y-auto">
+                            <h3 className="text-2xl font-bold mb-6">Detalles por Grado</h3>
+
+                            {/* Subgrupos por grado */}
+                            {Array.from({ length: 9 }, (_, groupIndex) => {
+                              const groupStart = groupIndex * 5;
+                              const groupDetails = r.details.slice(groupStart, groupStart + 5);
+                              const groupCorrect = groupDetails.filter(d => d.isCorrect).length;
+                              const groupTotal = 5;
+                              const groupPct = (groupCorrect / groupTotal) * 100;
+
+                              return (
+                                <div key={groupIndex} className="mb-10 pb-6 border-b border-gray-200 last:border-b-0">
+                                  <h4 className="text-xl font-semibold mb-4">Grado {groupIndex + 1}°</h4>
+                                  <div className="flex items-center justify-center mb-6">
+                                    <svg viewBox="0 0 36 36" className="w-32 h-32">
+                                      <path
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        fill="none"
+                                        stroke="#e5e7eb"
+                                        strokeWidth="3"
+                                      />
+                                      <path
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        fill="none"
+                                        stroke="#10b981"
+                                        strokeWidth="3"
+                                        strokeDasharray={`${groupPct}, 100`}
+                                      />
+                                      <text x="18" y="20.5" textAnchor="middle" fontSize="10" fill="#374151">
+                                        {groupPct.toFixed(1)}%
+                                      </text>
+                                    </svg>
+                                  </div>
+                                  <table className="w-full table-auto">
+                                    <thead>
+                                      <tr className="bg-gray-100">
+                                        <th className="p-3 text-left">Pregunta</th>
+                                        <th className="p-3 text-center">Respuesta</th>
+                                        <th className="p-3 text-center">Correcta</th>
+                                        <th className="p-3 text-center">¿Acertó?</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {groupDetails.map((detail, index) => (
+                                        <tr key={index} className="border-b last:border-b-0">
+                                          <td className="p-3">{detail.questionText.slice(0, 60)}...</td>
+                                          <td className="p-3 text-center">
+                                            {detail.userAnswer !== undefined ? String.fromCharCode(65 + detail.userAnswer) : '-'}
+                                          </td>
+                                          <td className="p-3 text-center">
+                                            {String.fromCharCode(65 + detail.correctAnswer)}
+                                          </td>
+                                          <td className="p-3 text-center font-bold" style={{ color: detail.isCorrect ? '#059669' : '#dc2626' }}>
+                                            {detail.isCorrect ? 'Sí' : 'No'}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              );
+                            })}
+
+                            {/* Diagrama acumulado final */}
+                            <div className="mt-8 pt-6 border-t border-gray-200">
+                              <h4 className="text-xl font-semibold mb-4 text-center">Resultado Acumulado</h4>
+                              <div className="flex items-center justify-center">
+                                <svg viewBox="0 0 36 36" className="w-40 h-40">
+                                  <path
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    fill="none"
+                                    stroke="#e5e7eb"
+                                    strokeWidth="4"
+                                  />
+                                  <path
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    fill="none"
+                                    stroke="#10b981"
+                                    strokeWidth="4"
+                                    strokeDasharray={`${parseFloat(r.pct)}, 100`}
+                                  />
+                                  <text x="18" y="21" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#111827">
+                                    {r.pct}%
+                                  </text>
+                                </svg>
+                              </div>
+                            </div>
+
+                            {/* Redacción final */}
+                            <div className="mt-8 pt-6 border-t border-gray-200">
+                              <h4 className="text-xl font-semibold mb-4">Redacción Final</h4>
+                              <div className="p-6 bg-gray-50 rounded-lg whitespace-pre-line text-gray-800">
+                                {r.redaccion || 'No se redactó respuesta.'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+  // ====== EXAMEN (PROFESOR) ======
   if (!started) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" id = "exc2"
+      <div data-screen="candidate-info" className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-8 flex items-center justify-center" id = "exc2"
       onCopy={(e) => e.preventDefault()}
       onContextMenu={(e) => e.preventDefault()}
       >
-        <div className="max-w-2xl w-full bg-white rounded-3xl shadow-2xl p-12 text-center border-8 border-indigo-200">
-          <h1 className="text-4xl font-black text-gray-900 mb-8">Datos del Candidato</h1>
+        <div className="max-w-2xl w-full bg-card rounded-3xl shadow-2xl p-12 text-center border-8 border-indigo-200">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-primary mb-6 tracking-tight">Datos del Profesor</h1>
           <input
             type="text"
             value={candidateName}
-            onChange={(e) => setCandidateName(e.target.value)}
+            onChange={(e) => {
+    const value = e.target.value
+      .normalize("NFD")                    // descompone acentos
+      .replace(/[\u0300-\u036f]/g, "")     // quita marcas de acento
+      .replace(/[^a-zA-ZñÑ\s]/g, "");      // solo letras, ñ/Ñ y espacios
+
+    setCandidateName(value);
+  }}
             placeholder="Nombre completo"
-            className="w-full p-4 mb-4 rounded-xl border-2 border-gray-300 focus:border-indigo-500 outline-none text-lg"
+            className="form-input"
           />
           <input
             type="text"
             value={candidateId}
-            onChange={(e) => setCandidateId(e.target.value)}
+            onChange={(e) => {
+    const value = e.target.value.replace(/\D/g, "");  // solo dígitos
+    // Limitar longitud (máx 10 dígitos)
+    if (value.length <= 10) {
+      setCandidateId(value);
+    }
+  }}
+  onBlur={() => {
+    // Validación final al salir del campo
+    const num = parseInt(candidateId, 10);
+    if (candidateId && (num < 1000000 || num > 9999999999)) {
+      alert("El número de documento debe tener entre 7 y 10 dígitos.");
+      setCandidateId("");
+    }
+  }}
             placeholder="Número de cédula"
-            className="w-full p-4 mb-8 rounded-xl border-2 border-gray-300 focus:border-indigo-500 outline-none text-lg"
+            className="form-input"
           />
-          <button
-            onClick={async () => {
-              if (!candidateName || !candidateId) {
-                alert("Por favor ingresa nombre y cédula");
-                return;
-              }
+          
+<select
+  value={selectedAsignatura}
+  onChange={(e) => setSelectedAsignatura(e.target.value)}
+  className="form-input"
+>
+  <option value="">Seleccione la asignatura</option>
+  <option value="Ciencias Naturales">Ciencias Naturales</option>
+  <option value="Ciencias Sociales">Ciencias Sociales</option>
+  <option value="Artística">Artística</option>
+  <option value="Ética y Religión">Ética y Religión</option>
+  <option value="Educación Física">Educación Física</option>
+  <option value="Lengua Castellana">Lengua Castellana</option>
+  <option value="Lengua Extranjera">Lengua Extranjera</option>
+  <option value="Matemática">Matemática</option>
+  <option value="Tecnología">Tecnología</option>
+  <option value="Servicios generales">Servicios generales</option>
+  <option value="Conductor de transporte escolar">Conductor de transporte escolar</option>
+  <option value="Auxiliar contable">Auxiliar contable</option>
+</select>
+          
+<button
+  onClick={async () => {
+  const bannedQuery = query(
+  collection(db, "bannedCandidates"),
+  where("idNumber", "==", candidateId.trim().toLowerCase())
+);
+const bannedSnapshot = await getDocs(bannedQuery);
+if (!bannedSnapshot.empty) {
+  alert("Tu cuenta ha sido bloqueada por violaciones de proctoring. No puedes volver a presentar el examen.");
+  setStartingExam(false);
+  return;
+}
 
-              try {
-                const sessionRef = await addDoc(collection(db, "activeSessions"), {
-                  name: candidateName,
-                  idNumber: candidateId,
-                  currentQuestion: 1,
-                  timeLeft: 3600,
-                  lastActivity: serverTimestamp(),
-                  startTime: serverTimestamp(),
-                });
-                setSessionId(sessionRef.id);
-              } catch (error) {
-                console.error("Error creando sesión:", error);
-                alert("Error al iniciar proctoring. Intenta de nuevo.");
-                return;
-              }
+if (!selectedAsignatura) {
+  alert("Por favor seleccione una asignatura.");
+  setStartingExam(false);
+  return;
+}
 
-              setStarted(true);
-              setProctoringActive(true);
-            }}
-            disabled={!candidateName || !candidateId}
-            className={`w-full py-6 rounded-2xl font-black text-2xl shadow-2xl transition-all ${
-              candidateName && candidateId
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white cursor-pointer'
-                : 'bg-gray-400 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            <Play className="w-10 h-10 mr-4 inline" />
-            ¡INICIAR EXAMEN!
-          </button>
+// Cargar preguntas según asignatura
+let loadedQuestions;
+switch (selectedAsignatura) {
+  case "Ciencias Naturales":
+    loadedQuestions = questionsCNA;
+    break;
+  case "Ciencias Sociales":
+    loadedQuestions = questionsCSO;
+    break;
+  case "Artística":
+    loadedQuestions = questionsART;
+    break;
+  case "Ética y Religión":
+    loadedQuestions = questionsETI;
+    break;
+  case "Educación Física":
+    loadedQuestions = questionsEDF;
+    break;
+  case "Lengua Castellana":
+    loadedQuestions = questionsHLC;
+    break;
+  case "Lengua Extranjera":
+    loadedQuestions = questionsHLE;
+    break;
+  case "Matemática":
+    loadedQuestions = questionsMAT;
+    break;
+  case "Tecnología":
+    loadedQuestions = questionsTEC;
+    break;
+  case "Servicios generales":
+    loadedQuestions = questionsSEG;
+    break;
+  case "Conductor de transporte escolar":
+    loadedQuestions = questionsCTE;
+    break;
+  case "Auxiliar contable":
+    loadedQuestions = questionsAUC;
+    break;
+  default:
+    loadedQuestions = questionsMAT; // Fallback a Matemática
+}
+setCurrentQuestions(loadedQuestions);
+
+    if (!candidateName || !candidateId || startingExam) return;
+
+    setStartingExam(true);
+
+    try {
+      const sessionRef = await addDoc(collection(db, "activeSessions"), {
+        name: candidateName,
+        idNumber: candidateId,
+        currentQuestion: 1,
+        timeLeft: 3600,
+        lastActivity: serverTimestamp(),
+        startTime: serverTimestamp(),
+      });
+      setSessionId(sessionRef.id);
+    } catch (error) {
+      console.error("Error creando sesión:", error);
+      alert("Error al iniciar proctoring. Intenta de nuevo.");
+      setStartingExam(false);
+      return;
+    }
+
+    setStarted(true);
+    setProctoringActive(true);
+    // No es necesario setStartingExam(false) aquí porque ya cambia de pantalla
+  }}
+  disabled={!candidateName || !candidateId || !selectedAsignatura || startingExam}
+  className={`w-full py-6 rounded-2xl font-black text-2xl shadow-2xl transition-all transform ${
+    !candidateName || !candidateId || startingExam
+      ? 'bg-gray-400 text-gray-500 cursor-not-allowed shadow-none'
+      : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white cursor-pointer'
+  } ${startingExam ? 'scale-95 opacity-75 cursor-wait' : ''}`}
+>
+  {startingExam ? (
+    'Iniciando...'
+  ) : (
+    <>
+      <Play className="w-10 h-10 mr-4 inline" />
+      INICIAR EXAMEN
+    </>
+  )}
+</button>
         </div>
       </div>
     );
   }
   
   if (started && !finished) {
-  const q = questions[currentQ];
-  const prog = ((currentQ + 1) / questions.length) * 100;
+  const q = currentQuestions[currentQ];
+  const prog = ((currentQ + 1) / currentQuestions.length) * 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-6" id = "exc3"
       onCopy={(e) => e.preventDefault()}
-      onContextMenu={(e) => e.preventDefault()}>
+      onContextMenu={(e) => e.preventDefault()}
+      onMouseDown={(e) => {
+    // Opcional: evita selección con mouse en desktop
+    if (e.button === 0) e.preventDefault();
+  }}
+      >
       <div className="max-w-4xl mx-auto mb-8">
-        <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-white/50">
+        <div className="bg-card backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-celeste/30">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
             <div className="flex items-center gap-4">
               <div className="flex items-center bg-red-100 p-3 rounded-xl border-2 border-red-200 shadow-md">
@@ -557,10 +838,10 @@ export default function MathExam() {
                 <span className="text-2xl font-mono font-bold text-red-700 tracking-wide">{formatTime(timeLeft)}</span>
               </div>
               <div className="bg-gradient-to-r from-indigo-100 to-purple-100 px-4 py-2 rounded-xl font-mono font-semibold text-indigo-900 shadow-inner">
-                Pregunta {currentQ + 1} de {questions.length}
+                Pregunta {currentQ + 1} de {currentQuestions.length}
               </div>
             </div>
-            <div className="flex items-center gap-4 text-sm font-semibold text-gray-800 bg-white/60 px-4 py-2 rounded-xl shadow-sm">
+            <div className="flex items-center gap-4 text-sm font-semibold text-gray-800 bg-card/60 px-4 py-2 rounded-xl shadow-sm">
               <User size={18} />
               {candidateName}
               <span className="ml-2 text-indigo-700 font-mono">#{candidateId}</span>
@@ -572,7 +853,7 @@ export default function MathExam() {
               )}
             </div>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
+          <div className="w-full bg-card-200 rounded-full h-3 shadow-inner">
             <div
               className="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full shadow-lg transition-all duration-1000"
               style={{ width: `${prog}%` }}
@@ -582,9 +863,18 @@ export default function MathExam() {
       </div>
 
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-10 border border-white/50">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Pregunta {currentQ + 1}</h2>
-          <div className="w-16 h-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full mb-8"></div>
+      
+        <div className="bg-card/95 backdrop-blur-xl rounded-3xl shadow-2xl p-10 border border-celeste/30">
+          <h2 className="text-4xl md:text-5xl font-bold text-primary mb-8 flex items-center gap-4">Pregunta {currentQ + 1}</h2>
+
+{violationMessage && (
+  <div className="mb-4 p-4 bg-red-100 border border-red-500 text-red-700 rounded-lg font-semibold animate-pulse-scale">
+    {violationMessage}
+  </div>
+)}
+
+          <div className="w-16 h-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full mb-8" onTouchStart={(e) => e.preventDefault()}
+  onTouchEnd={(e) => e.preventDefault()} ></div>
           <p className="text-xl leading-relaxed text-gray-800 mb-10">{q.question}</p>
 
           <div className="space-y-4 mb-12">
@@ -603,7 +893,7 @@ export default function MathExam() {
                     className={`w-8 h-8 rounded-2xl border-4 mr-5 flex items-center justify-center font-bold text-sm shadow-md transition-all group-hover:scale-110 ${
                       selected === i
                         ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-300/50'
-                        : 'bg-white border-gray-300 text-gray-600 shadow-sm'
+                        : 'bg-card border-gray-300 text-gray-600 shadow-sm'
                     }`}
                   >
                     {String.fromCharCode(65 + i)}
@@ -613,18 +903,81 @@ export default function MathExam() {
               </button>
             ))}
           </div>
+          
+{currentQ === currentQuestions.length - 1 && (
+  <div className="mt-8">
+    <h3 className="text-2xl font-bold mb-4">Pregunta de Redacción Final</h3>
+    
+    {/* Selección de pregunta */}
+    {!redaccionSelected ? (
+      <div className="mb-6">
+        <p className="text-lg mb-4">Seleccione una de las siguientes consignas para desarrollar:</p>
+        <select
+          value=""
+          onChange={(e) => {
+            const id = parseInt(e.target.value);
+            setRedaccionSelected(id);
+            const selected = redaccionBanco.find(q => q.id === id);
+            if (selected) alert(`Consigna seleccionada:\n\n${selected.consigna}`);
+          }}
+          className="w-full p-4 rounded-xl border-2 border-gray-300 focus:border-indigo-500 outline-none text-lg"
+        >
+          <option value="">-- Seleccione una consigna --</option>
+          {redaccionBanco.map(q => (
+            <option key={q.id} value={q.id}>
+              {q.titulo}
+            </option>
+          ))}
+        </select>
+      </div>
+    ) : (
+      <div className="mb-6">
+        <p className="text-xl font-semibold mb-4">
+          {redaccionBanco.find(q => q.id === redaccionSelected)?.titulo}
+        </p>
+        <p className="text-lg mb-4 whitespace-pre-line">
+          {redaccionBanco.find(q => q.id === redaccionSelected)?.consigna}
+        </p>
+        <textarea
+          value={redaccionText}
+          onChange={(e) => setRedaccionText(e.target.value)}
+          placeholder="Escribe tu respuesta aquí... (mínimo 200 palabras)"
+          className="w-full h-64 p-4 rounded-xl border-2 border-gray-300 focus:border-indigo-500 outline-none text-lg"
+        />
+      </div>
+    )}
+  </div>
+)}
 
           <div className="flex justify-end pt-6 border-t-2 border-gray-100">
+            
+            <button
+    onClick={() => {
+      if (currentQ > 0) {
+        setCurrentQ(prev => prev - 1);
+        setSelected(answers[currentQ - 1] ?? null);
+      }
+    }}
+    disabled={currentQ === 0 || proctorLocked}
+    className={`px-12 py-5 rounded-2xl font-black text-lg shadow-2xl transition-all transform ${
+      currentQ === 0
+        ? 'bg-card-400 text-gray-500 cursor-not-allowed shadow-none'
+        : 'bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white shadow-gray-500/50 hover:shadow-gray-500/75 hover:scale-[1.05]'
+    }`}
+  >
+    ← Anterior
+  </button>
+            
             <button
               onClick={handleNext}
-              disabled={selected === null}
+              disabled={selected === null || savingAnswer}
               className={`px-12 py-5 rounded-2xl font-black text-lg shadow-2xl transition-all transform ${
-                selected === null
-                  ? 'bg-gray-400 text-gray-500 cursor-not-allowed shadow-none'
-                  : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-500/50 hover:shadow-indigo-500/75 hover:scale-[1.05] shadow-2xl'
-              }`}
+  selected === null || savingAnswer
+    ? 'bg-gray-400 text-gray-500 cursor-not-allowed shadow-none'
+    : 'btn-primary hover:scale-[1.05] shadow-2xl'
+} ${savingAnswer ? 'opacity-50 cursor-wait' : ''}`}
             >
-              {currentQ < questions.length - 1 ? `Siguiente (${currentQ + 2})` : '🎯 Finalizar Examen'}
+              {currentQ < currentQuestions.length - 1 ? `Siguiente (${currentQ + 2})` : '🎯 Finalizar Examen'}
             </button>
           </div>
         </div>
@@ -634,15 +987,16 @@ export default function MathExam() {
 }
 
   // ====== RESULTADO FINAL ======
+  /*
   if (finished) {
     const score = calculateScore(answers);
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-50 p-8 flex items-center justify-center">
-        <div className="max-w-2xl w-full bg-white rounded-3xl shadow-2xl p-12 text-center border-8 border-emerald-200">
+        <div className="max-w-2xl w-full bg-card rounded-3xl shadow-2xl p-12 text-center border-8 border-emerald-200">
           <div className={`w-32 h-32 rounded-3xl mx-auto mb-8 flex items-center justify-center shadow-2xl ${score.passed ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
             {score.passed ? <CheckCircle className="w-20 h-20" /> : <AlertCircle className="w-20 h-20" />}
           </div>
-          <h1 className="text-5xl font-black text-gray-900 mb-6">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-primary mb-6 tracking-tight">
             {score.passed ? '🎉 ¡FELICITACIONES!' : '📊 Resultados'}
           </h1>
           <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-8 mb-8 shadow-inner">
@@ -660,14 +1014,14 @@ export default function MathExam() {
                 </div>
               </div>
             </div>
-            <div className="mt-6 p-4 bg-white rounded-xl shadow-sm">
+            <div className="mt-6 p-4 bg-card rounded-xl shadow-sm">
               <p className="text-gray-700 font-semibold">
                 ⏱️ Tiempo utilizado: <span className="font-black text-indigo-600">{formatTime(3600 - timeLeft)}</span>
               </p>
             </div>
           </div>
           <p className="text-xl text-gray-600 mb-8 max-w-md mx-auto">
-            Tus respuestas han sido registradas exitosamente. El equipo de admisiones te contactará pronto.
+            Tus respuestas han sido registradas exitosamente. El equipo administrativo te contactará pronto.
           </p>
           <button
             onClick={() => window.location.reload()}
@@ -679,6 +1033,32 @@ export default function MathExam() {
       </div>
     );
   }
+  */
+  if (finished) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-50 p-8 flex items-center justify-center">
+      <div className="max-w-2xl w-full bg-white rounded-3xl shadow-2xl p-12 text-center border-8 border-emerald-200">
+        <h1 className="text-5xl font-black text-gray-900 mb-6">📊 Examen Finalizado</h1>
+        <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-8 mb-8 shadow-inner">
+          <div className="mt-6 p-4 bg-white rounded-xl shadow-sm">
+            <p className="text-gray-700 font-semibold">
+              ⏱️ Tiempo utilizado: <span className="font-black text-indigo-600">{formatTime(3600 - timeLeft)}</span>
+            </p>
+          </div>
+        </div>
+        <p className="text-xl text-gray-600 mb-8 max-w-md mx-auto">
+          Tus respuestas han sido registradas exitosamente. El equipo administrativo te contactará pronto.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black py-5 px-12 rounded-2xl shadow-2xl text-xl transition-all hover:shadow-3xl hover:scale-105"
+        >
+          Finalizar
+        </button>
+      </div>
+    </div>
+  );
+}
 
   return null; // No debería llegar aquí
 }
