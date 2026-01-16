@@ -99,7 +99,7 @@
 }
 
 /* Tema claro (default) */
-@media (prefers-color-scheme: light) {
+@media (prefers-color-scheme: dark) {
   body {
     background-color: var(--color-white);
     color: var(--color-dark);
@@ -137,7 +137,7 @@
 }
 
 /* Tema oscuro, deshabilitado */
-@media (prefers-color-scheme: light) {
+@media (prefers-color-scheme: dark) {
   body {
     background-color: var(--color-dark);
     color: var(--color-white);
