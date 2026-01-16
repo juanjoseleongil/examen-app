@@ -507,7 +507,7 @@ export const questionsTEC = [
   { id: 2, question: "El propósito principal del uso de la tecnología en grado 1° es:", options: ["Reemplazar al docente", "Jugar todo el tiempo", "Apoyar el aprendizaje y la creatividad", "Castigar a los estudiantes"], correct: 2 },
   { id: 3, question: "Un uso responsable de la tecnología significa:", options: ["Usarla sin límites", "Cuidar los dispositivos y seguir normas", "Usarla solo en casa", "Evitarla completamente"], correct: 1 },
   { id: 4, question: "¿Cuál de las siguientes acciones demuestra cuidado de los artefactos tecnológicos?", options: ["Mojarlos", "Golpearlos", "Usarlos con cuidado", "Desarmarlos sin permiso"], correct: 2 },
-  { id: 5, question: "En tecnología, el rol del docente en primaria es principalmente:", options: ["Prohibir el uso de dispositivos", "Guiar y acompañar el aprendizaje", "Dejar a los estudiantes solos", "Evaluar solo resultados"], correct: 1 },
+  { id: 5, question: "En tecnología, el rol del docente en primaria es principalmente:", options: ["Prohibir el uso de dispositivos", "Guiar y acompañar el aprendizaje", "Dejar a los estudiantes solos", "Evaluar solo resultados"], correct: 1 }/*,
 
   // GRADO 2°
   { id: 6, question: "El teclado es una parte del:", options: ["Software", "Computador", "Internet", "Servicio público"], correct: 1 },
@@ -563,7 +563,7 @@ export const questionsTEC = [
   { id: 42, question: "Un proyecto tecnológico bien diseñado debe:", options: ["Ser complejo", "Resolver una necesidad real", "Usar muchos recursos", "Ser digital"], correct: 1 },
   { id: 43, question: "La innovación implica:", options: ["Crear por crear", "Mejorar la calidad de vida", "Reemplazar lo anterior", "Usar alta tecnología"], correct: 1 },
   { id: 44, question: "Relacionar tecnología y proyecto de vida significa:", options: ["Elegir una carrera técnica", "Tomar decisiones conscientes", "Usar tecnología diariamente", "Depender de dispositivos"], correct: 1 },
-  { id: 45, question: "En grado 9°, el enfoque docente debe ser:", options: ["Operativo", "Crítico y reflexivo", "Instrumental", "Técnico avanzado"], correct: 1 }
+  { id: 45, question: "En grado 9°, el enfoque docente debe ser:", options: ["Operativo", "Crítico y reflexivo", "Instrumental", "Técnico avanzado"], correct: 1 }*/
 ];
 
 export const questionsSEG = [
@@ -668,7 +668,7 @@ export const questionsAUC = [
 export const redaccionBanco = [
   {
     id: 1,
-    titulo: "Título 1: REGISTRO EN EL OBSERVADOR",
+    titulo: "REGISTRO EN EL OBSERVADOR",
     descripcion: "Un estudiante presenta conductas reiteradas de irrespeto hacia sus compañeros durante la jornada escolar, afectando el desarrollo de la clase.",
     consigna: "Redacte lo que escribiría en el observador del estudiante para una falta tipo II, incluyendo descripción objetiva de los hechos y acción pedagógica."
   },
