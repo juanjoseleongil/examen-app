@@ -136,7 +136,7 @@
   }
 }
 
-/* Tema oscuro */
+/* Tema oscuro, deshabilitado */
 @media (prefers-color-scheme: light) {
   body {
     background-color: var(--color-dark);
